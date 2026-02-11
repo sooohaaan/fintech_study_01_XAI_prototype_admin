@@ -37,9 +37,18 @@ class DataCollector:
         except Exception as e:
             print(f"⚠️ secrets.toml 로드 실패: {e}")
 
-        # 실패 시 하드코딩된 기본값 사용 (개발용 Fallback)
-        print("⚠️ 기본 하드코딩 설정으로 DB에 연결합니다.")
-        return create_engine('mysql+mysqlconnector://user:password@localhost/fintech_db')
+        # secrets.toml 실패 시 환경 변수 확인 (Docker/Cloud 환경 대비)
+        if os.getenv("DB_HOST"):
+            user = os.getenv("DB_USER", "root")
+            password = os.getenv("DB_PASSWORD", "")
+            host = os.getenv("DB_HOST", "localhost")
+            port = os.getenv("DB_PORT", "3306")
+            database = os.getenv("DB_DATABASE", "fintech_db")
+            db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}"
+            return create_engine(db_url)
+
+        # 모든 설정 실패 시 에러 발생
+        raise ValueError("❌ DB 연결 설정을 찾을 수 없습니다. (.streamlit/secrets.toml 파일 또는 환경변수를 확인해주세요.)")
 
     def _log_status(self, source, status, row_count=0, error_msg=None):
         """수집 결과를 collection_logs 테이블에 기록"""

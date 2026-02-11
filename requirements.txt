@@ -1,0 +1,7 @@
+Flask
+pandas
+requests
+schedule
+SQLAlchemy
+toml
+mysql-connector-python
