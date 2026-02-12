@@ -5,35 +5,59 @@
     <title>Fintech Admin</title>
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; padding: 2rem; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
-        
-        /* Basic button styling */
-        button {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 0.5rem;
-            background-color: #3b82f6;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #2563eb;
-        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; font-size: 1.5rem; }
+
+        /* Navigation */
+        .base-header { background: white; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .base-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .base-header-top h2 { color: #1e3a8a; margin: 0; font-size: 1.3rem; }
+        .base-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+        .base-nav a { padding: 6px 12px; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: bold; transition: all 0.2s; }
+        .base-nav a:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* Buttons */
+        button { padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; background-color: #3b82f6; color: white; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #2563eb; }
+
+        /* Alerts */
         .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 5px; }
         .success { background-color: #d1fae5; color: #065f46; }
         .error { background-color: #fee2e2; color: #991b1b; }
-        .warning { background-color: #fff3cd; color: #856404; }
+        .warning { background-color: #fef3c7; color: #92400e; }
+
+        /* Summary cards (공통) */
+        .summary-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center; }
+        .summary-value { font-size: 2rem; font-weight: 700; color: #1e3a8a; margin: 0.5rem 0; }
+        .summary-label { color: #6b7280; font-size: 0.9rem; font-weight: 600; }
+
+        /* Badges */
+        .badge-on { background: #d1fae5; color: #065f46; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .badge-off { background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+        th { background-color: #f9fafb; color: #4b5563; font-weight: 600; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px;">
-            <h1 style="color: #1e3a8a; margin: 0; font-size: 1.8rem;">🛠️ Fintech Service Admin</h1>
-            <a href="/logout" style="background-color: #fee2e2; color: #991b1b; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: bold;">🚪 로그아웃</a>
-            <a href="/" style="background-color: #dbeafe; color: #1e40af; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: bold;">🏠 홈</a>
+        <div class="base-header">
+            <div class="base-header-top">
+                <h2>Fintech Service Admin</h2>
+                <a href="/logout" style="background-color: #fee2e2; color: #991b1b; padding: 6px 14px; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: bold;">로그아웃</a>
+            </div>
+            <div class="base-nav">
+                <a href="/" style="background-color: #dbeafe; color: #1e40af;">Home</a>
+                <a href="/collection-management" style="background-color: #fef3c7; color: #92400e;">수집 관리</a>
+                <a href="/credit-weights" style="background-color: #e0e7ff; color: #3730a3;">신용평가 설정</a>
+                <a href="/recommend-settings" style="background-color: #fce7f3; color: #9d174d;">추천 설정</a>
+                <a href="/products" style="background-color: #d1fae5; color: #065f46;">상품 관리</a>
+                <a href="/missions" style="background-color: #ede9fe; color: #5b21b6;">미션 관리</a>
+                <a href="/simulator" style="background-color: #fce7f3; color: #9d174d;">시뮬레이터</a>
+                <a href="/data/raw_loan_products" style="background-color: #e0e7ff; color: #3730a3;">데이터 조회</a>
+            </div>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -43,3 +67,6 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

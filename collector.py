@@ -5,7 +5,7 @@ import schedule
 import time
 from datetime import datetime
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import toml
 from pathlib import Path
 
@@ -20,24 +20,22 @@ class DataCollector:
     def _create_default_engine(self):
         """단독 실행 시 secrets.toml을 읽어 DB 엔진 생성"""
         try:
-            # 현재 파일(collector.py)이 있는 폴더 기준 .streamlit/secrets.toml 탐색
             base_dir = Path(__file__).parent
-            secrets_path = base_dir / ".streamlit" / "secrets.toml"
-            
-            # 파일이 없으면 상위 폴더도 한 번 확인 (프로젝트 루트 실행 대비)
-            if not secrets_path.exists():
-                secrets_path = base_dir.parent / ".streamlit" / "secrets.toml"
-            
-            if secrets_path.exists():
-                secrets = toml.load(secrets_path)
-                if "mysql" in secrets:
-                    db_conf = secrets["mysql"]
-                    db_url = f"mysql+mysqlconnector://{db_conf['user']}:{db_conf['password']}@{db_conf['host']}:{db_conf['port']}/{db_conf['database']}"
-                    return create_engine(db_url)
+            candidates = [
+                base_dir / ".streamlit" / "secrets.toml",
+                base_dir / "secrets.toml",
+                base_dir.parent / ".streamlit" / "secrets.toml",
+            ]
+            for secrets_path in candidates:
+                if secrets_path.exists():
+                    secrets = toml.load(secrets_path)
+                    if "mysql" in secrets:
+                        db_conf = secrets["mysql"]
+                        db_url = f"mysql+mysqlconnector://{db_conf['user']}:{db_conf['password']}@{db_conf['host']}:{db_conf['port']}/{db_conf['database']}"
+                        return create_engine(db_url)
         except Exception as e:
-            print(f"⚠️ secrets.toml 로드 실패: {e}")
+            print(f"secrets.toml 로드 실패: {e}")
 
-        # secrets.toml 실패 시 환경 변수 확인 (Docker/Cloud 환경 대비)
         if os.getenv("DB_HOST"):
             user = os.getenv("DB_USER", "root")
             password = os.getenv("DB_PASSWORD", "")
@@ -47,8 +45,7 @@ class DataCollector:
             db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}"
             return create_engine(db_url)
 
-        # 모든 설정 실패 시 에러 발생
-        raise ValueError("❌ DB 연결 설정을 찾을 수 없습니다. (.streamlit/secrets.toml 파일 또는 환경변수를 확인해주세요.)")
+        raise ValueError("DB 연결 설정을 찾을 수 없습니다. (secrets.toml 또는 환경변수를 확인해주세요.)")
 
     def _log_status(self, source, status, row_count=0, error_msg=None):
         """수집 결과를 collection_logs 테이블에 기록"""
@@ -63,6 +60,46 @@ class DataCollector:
         df.to_sql('collection_logs', self.engine, if_exists='append', index=False)
         print(f"[{source}] {status} - Rows: {row_count}")
 
+    def _replace_table(self, table_name, df):
+        """기존 데이터를 삭제하고 새 데이터로 교체 (중복 적재 방지)
+        raw_loan_products의 경우 is_visible 값을 보존함"""
+        with self.engine.connect() as conn:
+            if table_name == 'raw_loan_products':
+                # is_visible 보존: 기존 매핑 저장
+                visibility_map = {}
+                try:
+                    existing = pd.read_sql("SELECT bank_name, product_name, is_visible FROM raw_loan_products", self.engine)
+                    for _, row in existing.iterrows():
+                        visibility_map[(row['bank_name'], row['product_name'])] = row['is_visible']
+                except Exception:
+                    pass
+
+                conn.execute(text(f"DELETE FROM {table_name}"))
+                conn.commit()
+
+                # 보존된 is_visible 복원 (신규 상품은 기본값 1)
+                if 'is_visible' not in df.columns:
+                    df['is_visible'] = df.apply(
+                        lambda row: visibility_map.get((row['bank_name'], row['product_name']), 1), axis=1
+                    )
+            else:
+                conn.execute(text(f"DELETE FROM {table_name}"))
+                conn.commit()
+
+        df.to_sql(table_name, self.engine, if_exists='append', index=False)
+
+    def _is_source_enabled(self, config_key):
+        """service_config에서 수집 소스 활성화 여부 확인"""
+        try:
+            with self.engine.connect() as conn:
+                val = conn.execute(
+                    text("SELECT config_value FROM service_config WHERE config_key = :k"),
+                    {'k': config_key}
+                ).scalar()
+                return val != '0'  # '0'만 비활성, 나머지(None, '1' 등)는 활성
+        except Exception:
+            return True  # DB 오류 시 기본 활성
+
     def _fetch_with_retry(self, func, max_retries=3):
         """API 호출 실패 시 재시도 로직"""
         for attempt in range(max_retries):
@@ -71,29 +108,23 @@ class DataCollector:
             except Exception as e:
                 if attempt == max_retries - 1:
                     raise e
-                print(f"⚠️ Connection failed. Retrying... ({attempt + 1}/{max_retries})")
+                print(f"Connection failed. Retrying... ({attempt + 1}/{max_retries})")
                 time.sleep(2)
 
     def collect_fss_loan_products(self):
         """1. 금융감독원 API: 대출 상품 정보 수집"""
         source_name = "FSS_LOAN_API"
+        if not self._is_source_enabled('COLLECTOR_FSS_LOAN_ENABLED'):
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            return
         try:
-            # API 호출 로직 (예시)
-            # url = "http://finlife.fss.or.kr/..."
-            # response = requests.get(url, params={...})
-            # data = response.json()
-            
-            # Mock Data (실제 구현 시 API 응답 파싱으로 대체)
             mock_data = [
                 {'bank_name': '우리은행', 'product_name': 'WON직장인대출', 'loan_rate_min': 3.5, 'loan_rate_max': 4.5, 'loan_limit': 100000000},
                 {'bank_name': '카카오뱅크', 'product_name': '신용대출', 'loan_rate_min': 3.2, 'loan_rate_max': 5.0, 'loan_limit': 150000000}
             ]
             df = pd.DataFrame(mock_data)
-            
-            # DB 적재
-            df.to_sql('raw_loan_products', self.engine, if_exists='append', index=False)
+            self._replace_table('raw_loan_products', df)
             self._log_status(source_name, "SUCCESS", len(df))
-            
         except Exception:
             error_msg = traceback.format_exc()
             self._log_status(source_name, "FAIL", 0, error_msg)
@@ -101,16 +132,18 @@ class DataCollector:
     def collect_kosis_income_stats(self):
         """2. 통계청 API: 연령별/소득구간별 소득 통계 수집"""
         source_name = "KOSIS_INCOME_API"
+        if not self._is_source_enabled('COLLECTOR_KOSIS_INCOME_ENABLED'):
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            return
         print(f"--- {source_name} 수집 시작 ---")
         try:
-            # Mock Data (실제로는 self._fetch_with_retry(requests.get, ...) 형태로 사용)
             mock_data = [
                 {'age_group': '20대', 'income_decile': 5, 'avg_income': 32000000},
                 {'age_group': '30대', 'income_decile': 5, 'avg_income': 54000000},
                 {'age_group': '40대', 'income_decile': 5, 'avg_income': 68000000}
             ]
             df = pd.DataFrame(mock_data)
-            df.to_sql('raw_income_stats', self.engine, if_exists='append', index=False)
+            self._replace_table('raw_income_stats', df)
             self._log_status(source_name, "SUCCESS", len(df))
         except Exception:
             error_msg = traceback.format_exc()
@@ -119,18 +152,18 @@ class DataCollector:
     def collect_economic_indicators(self):
         """3,4,5. 경제 지표 통합 수집 (부동산, 금리, 고용)"""
         source_name = "ECONOMIC_INDICATORS"
+        if not self._is_source_enabled('COLLECTOR_ECONOMIC_ENABLED'):
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            return
         try:
-            # 여러 API에서 데이터를 가져와 통합한다고 가정
             indicators = [
                 {'indicator_type': 'COFIX', 'region': 'NATIONWIDE', 'indicator_value': 3.85, 'reference_date': '2023-10-15'},
                 {'indicator_type': 'ESTATE_PRICE_INDEX', 'region': 'SEOUL', 'indicator_value': 102.5, 'reference_date': '2023-10-01'},
                 {'indicator_type': 'EMPLOYMENT_RATE', 'region': 'MANUFACTURING', 'indicator_value': 95.2, 'reference_date': '2023-09-01'}
             ]
             df = pd.DataFrame(indicators)
-            
-            df.to_sql('raw_economic_indicators', self.engine, if_exists='append', index=False)
+            self._replace_table('raw_economic_indicators', df)
             self._log_status(source_name, "SUCCESS", len(df))
-            
         except Exception:
             error_msg = traceback.format_exc()
             self._log_status(source_name, "FAIL", 0, error_msg)
@@ -144,8 +177,8 @@ class DataCollector:
         print("=== 수집 파이프라인 종료 ===")
 
 if __name__ == "__main__":
-    print("🚀 Data Collector Scheduler Started...")
-    print("🕒 Scheduled to run every day at 09:00 AM.")
+    print("Data Collector Scheduler Started...")
+    print("Scheduled to run every day at 09:00 AM.")
 
     def job():
         collector = DataCollector()

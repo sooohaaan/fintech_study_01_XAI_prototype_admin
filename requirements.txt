@@ -3,5 +3,6 @@ pandas
 requests
 schedule
 SQLAlchemy
+streamlit
 toml
 mysql-connector-python
