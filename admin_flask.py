@@ -103,6 +103,160 @@ def init_schema(engine):
                         VALUES (:uid, :title, :desc, :mtype, :purpose, :status, :diff, :pts, DATE_ADD(CURDATE(), INTERVAL 30 DAY))
                     """), {'uid': m[0], 'title': m[1], 'desc': m[2], 'mtype': m[3], 'purpose': m[4], 'status': m[5], 'diff': m[6], 'pts': m[7]})
 
+            # Feature 6: user_points 테이블 생성
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS user_points (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(100) NOT NULL UNIQUE,
+                    balance INT NOT NULL DEFAULT 0,
+                    total_earned INT NOT NULL DEFAULT 0,
+                    total_spent INT NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """))
+
+            # Feature 6: point_transactions 테이블 생성
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS point_transactions (
+                    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(100) NOT NULL,
+                    amount INT NOT NULL,
+                    transaction_type VARCHAR(30) NOT NULL DEFAULT 'manual',
+                    reason VARCHAR(255),
+                    admin_id VARCHAR(100),
+                    reference_id VARCHAR(100),
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
+            # Feature 7: point_products 테이블 생성
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS point_products (
+                    product_id INT AUTO_INCREMENT PRIMARY KEY,
+                    product_name VARCHAR(255) NOT NULL,
+                    product_type VARCHAR(50) NOT NULL DEFAULT 'coupon',
+                    description TEXT,
+                    point_cost INT NOT NULL DEFAULT 0,
+                    stock_quantity INT NOT NULL DEFAULT 0,
+                    is_active TINYINT(1) NOT NULL DEFAULT 1,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """))
+
+            # Feature 7: point_purchases 테이블 생성
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS point_purchases (
+                    purchase_id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(100) NOT NULL,
+                    product_id INT NOT NULL,
+                    point_cost INT NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'completed',
+                    purchased_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
+            # user_points mock 데이터
+            up_count = conn.execute(text("SELECT COUNT(*) FROM user_points")).scalar()
+            if up_count == 0:
+                mock_user_points = [
+                    ("user_001", 1250, 2500, 1250),
+                    ("user_002", 3800, 5000, 1200),
+                    ("user_003", 500, 800, 300),
+                    ("user_004", 0, 1000, 1000),
+                    ("user_005", 2100, 2100, 0),
+                    ("user_006", 750, 1500, 750),
+                ]
+                for up in mock_user_points:
+                    conn.execute(text("""
+                        INSERT INTO user_points (user_id, balance, total_earned, total_spent)
+                        VALUES (:uid, :bal, :earned, :spent)
+                    """), {'uid': up[0], 'bal': up[1], 'earned': up[2], 'spent': up[3]})
+
+            # point_transactions mock 데이터
+            pt_count = conn.execute(text("SELECT COUNT(*) FROM point_transactions")).scalar()
+            if pt_count == 0:
+                mock_transactions = [
+                    ("user_001", 500, "mission_reward", "비상금 100만원 모으기 미션 완료 보상", "system", "mission_1"),
+                    ("user_001", 200, "manual", "이벤트 참여 보너스", "admin", None),
+                    ("user_001", -300, "purchase", "스타벅스 아메리카노 쿠폰 구매", "system", "purchase_1"),
+                    ("user_002", 1000, "mission_reward", "신용점수 50점 올리기 미션 완료", "system", "mission_3"),
+                    ("user_002", -500, "purchase", "CU 편의점 5000원 상품권 구매", "system", "purchase_2"),
+                    ("user_003", 300, "manual", "신규 가입 웰컴 포인트", "admin", None),
+                    ("user_004", -200, "adjustment", "포인트 오류 차감 정정", "admin", None),
+                    ("user_005", 2100, "mission_reward", "적금 자동이체 설정 미션 완료", "system", "mission_4"),
+                ]
+                for t in mock_transactions:
+                    conn.execute(text("""
+                        INSERT INTO point_transactions (user_id, amount, transaction_type, reason, admin_id, reference_id)
+                        VALUES (:uid, :amt, :ttype, :reason, :admin, :ref)
+                    """), {'uid': t[0], 'amt': t[1], 'ttype': t[2], 'reason': t[3], 'admin': t[4], 'ref': t[5]})
+
+            # point_products mock 데이터
+            pp_count = conn.execute(text("SELECT COUNT(*) FROM point_products")).scalar()
+            if pp_count == 0:
+                mock_products = [
+                    ("스타벅스 아메리카노", "coupon", "스타벅스 아메리카노 1잔 교환권", 300, 100, 1),
+                    ("CU 편의점 5000원 상품권", "gift_card", "CU 편의점에서 사용 가능한 5000원 상품권", 500, 50, 1),
+                    ("대출 금리 0.1%p 할인", "discount", "대출 신청 시 금리 0.1%p 할인 쿠폰", 1000, 20, 1),
+                    ("배달의민족 10000원 쿠폰", "coupon", "배달의민족 10000원 할인 쿠폰", 800, 30, 1),
+                    ("넷플릭스 1개월 이용권", "experience", "넷플릭스 스탠다드 1개월 이용권", 2000, 10, 0),
+                ]
+                for p in mock_products:
+                    conn.execute(text("""
+                        INSERT INTO point_products (product_name, product_type, description, point_cost, stock_quantity, is_active)
+                        VALUES (:name, :ptype, :desc, :cost, :stock, :active)
+                    """), {'name': p[0], 'ptype': p[1], 'desc': p[2], 'cost': p[3], 'stock': p[4], 'active': p[5]})
+
+            # point_purchases mock 데이터
+            ppur_count = conn.execute(text("SELECT COUNT(*) FROM point_purchases")).scalar()
+            if ppur_count == 0:
+                mock_purchases = [
+                    ("user_001", 1, 300, "completed"),
+                    ("user_002", 2, 500, "completed"),
+                    ("user_001", 4, 800, "completed"),
+                    ("user_003", 1, 300, "cancelled"),
+                    ("user_002", 3, 1000, "completed"),
+                ]
+                for pur in mock_purchases:
+                    conn.execute(text("""
+                        INSERT INTO point_purchases (user_id, product_id, point_cost, status)
+                        VALUES (:uid, :pid, :cost, :status)
+                    """), {'uid': pur[0], 'pid': pur[1], 'cost': pur[2], 'status': pur[3]})
+
+            # Feature 8: users 테이블 생성
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id VARCHAR(100) PRIMARY KEY,
+                    user_name VARCHAR(100) NOT NULL,
+                    email VARCHAR(200),
+                    phone VARCHAR(20),
+                    status VARCHAR(20) NOT NULL DEFAULT 'active',
+                    join_date DATE,
+                    memo TEXT,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """))
+
+            # users mock 데이터 (기존 user_001~006과 매칭)
+            users_count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
+            if users_count == 0:
+                mock_users = [
+                    ("user_001", "김민수", "minsu@example.com", "010-1234-5678", "active", "2024-01-15"),
+                    ("user_002", "이지영", "jiyoung@example.com", "010-2345-6789", "active", "2024-02-20"),
+                    ("user_003", "박준호", "junho@example.com", "010-3456-7890", "active", "2024-03-10"),
+                    ("user_004", "최수연", "suyeon@example.com", "010-4567-8901", "suspended", "2024-04-05"),
+                    ("user_005", "정태윤", "taeyun@example.com", "010-5678-9012", "active", "2024-05-22"),
+                    ("user_006", "한서윤", "seoyun@example.com", "010-6789-0123", "active", "2024-06-30"),
+                ]
+                for u in mock_users:
+                    conn.execute(text("""
+                        INSERT INTO users (user_id, user_name, email, phone, status, join_date)
+                        VALUES (:uid, :name, :email, :phone, :status, :join_date)
+                    """), {'uid': u[0], 'name': u[1], 'email': u[2], 'phone': u[3], 'status': u[4], 'join_date': u[5]})
+
             conn.commit()
     except Exception as e:
         print(f"Schema init warning: {e}")
@@ -175,11 +329,14 @@ HTML_TEMPLATE = """
             </div>
             <div class="nav-bar">
                 <a href="/" class="nav-btn" style="background-color: #dbeafe; color: #1e40af;">Home</a>
+                <a href="/members" class="nav-btn" style="background-color: #fef9c3; color: #854d0e;">회원 관리</a>
                 <a href="/collection-management" class="nav-btn" style="background-color: #fef3c7; color: #92400e;">수집 관리</a>
                 <a href="/credit-weights" class="nav-btn" style="background-color: #e0e7ff; color: #3730a3;">신용평가 설정</a>
                 <a href="/recommend-settings" class="nav-btn" style="background-color: #fce7f3; color: #9d174d;">추천 설정</a>
                 <a href="/products" class="nav-btn" style="background-color: #d1fae5; color: #065f46;">상품 관리</a>
                 <a href="/missions" class="nav-btn" style="background-color: #ede9fe; color: #5b21b6;">미션 관리</a>
+                <a href="/points" class="nav-btn" style="background-color: #ccfbf1; color: #115e59;">포인트 관리</a>
+                <a href="/point-products" class="nav-btn" style="background-color: #ffedd5; color: #9a3412;">포인트 상품</a>
                 <a href="/simulator" class="nav-btn" style="background-color: #fce7f3; color: #9d174d;">시뮬레이터</a>
                 <a href="/data/raw_loan_products" class="nav-btn" style="background-color: #e0e7ff; color: #3730a3;">데이터 조회</a>
                 <a href="/logout" class="nav-btn" style="background-color: #fee2e2; color: #991b1b;">로그아웃</a>
@@ -341,6 +498,11 @@ DATA_VIEWER_TEMPLATE = """
         <a href="/data/raw_income_stats" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'raw_income_stats' else '#6b7280' }}">소득 통계</a>
         <a href="/data/collection_logs" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'collection_logs' else '#6b7280' }}">수집 로그</a>
         <a href="/data/missions" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'missions' else '#6b7280' }}">미션</a>
+        <a href="/data/user_points" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'user_points' else '#6b7280' }}">유저 포인트</a>
+        <a href="/data/point_transactions" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_transactions' else '#6b7280' }}">포인트 거래</a>
+        <a href="/data/point_products" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_products' else '#6b7280' }}">포인트 상품</a>
+        <a href="/data/point_purchases" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_purchases' else '#6b7280' }}">포인트 구매</a>
+        <a href="/data/users" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'users' else '#6b7280' }}">회원</a>
     </div>
     <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" style="margin-bottom: 20px; background: #f9fafb; padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <span style="font-weight: bold; color: #4b5563;">검색:</span>
@@ -827,6 +989,612 @@ MISSION_DETAIL_TEMPLATE = """
 """
 
 # ==========================================================================
+# [HTML] F6: 포인트 관리
+# ==========================================================================
+POINTS_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>포인트 관리</h1>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">유저별 포인트 현황을 모니터링하고 수동으로 포인트를 지급/차감합니다.</p>
+
+<!-- 통계 카드 -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card">
+        <div class="summary-label">총 유저 수</div>
+        <div class="summary-value">{{ user_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 유통 포인트</div>
+        <div class="summary-value">{{ "{:,}".format(total_balance) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 지급 포인트</div>
+        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(total_earned) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용 포인트</div>
+        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(total_spent) }}</div>
+    </div>
+</div>
+
+<!-- 수동 포인트 조정 -->
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
+    <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1.1rem;">수동 포인트 조정</h3>
+    <form method="post" action="/points/adjust" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 150px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">유저 ID</label>
+            <input type="text" name="user_id" placeholder="예: user_001" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="flex: 1; min-width: 120px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">금액 (양수=지급, 음수=차감)</label>
+            <input type="number" name="amount" placeholder="예: 100 또는 -50" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="flex: 2; min-width: 200px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">사유</label>
+            <input type="text" name="reason" placeholder="예: 이벤트 보상, 오류 정정" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <button type="submit" style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">포인트 조정</button>
+    </form>
+</div>
+
+<!-- 유저 포인트 테이블 -->
+<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유저 ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">잔액</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">총 지급</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">총 사용</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">최근 업데이트</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상세</th>
+        </tr></thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ u.user_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 700; color: #1e3a8a;">{{ "{:,}".format(u.balance) }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #059669;">{{ "{:,}".format(u.total_earned) }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #dc2626;">{{ "{:,}".format(u.total_spent) }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.updated_at if u.updated_at else '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    <a href="/points/{{ u.user_id }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">거래 내역</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">포인트 데이터가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
+
+POINT_DETAIL_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>포인트 상세 - {{ user_id }}</h1>
+<a href="/points" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
+
+<!-- 유저 잔액 요약 -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">현재 잔액</div>
+        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 지급</div>
+        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(user.total_earned) }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 사용</div>
+        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(user.total_spent) }}</div>
+    </div>
+</div>
+
+<!-- 거래 내역 -->
+<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
+    <h3 style="margin: 0 0 1rem 0.5rem; color: #1e3a8a; font-size: 1rem;">거래 내역</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">금액</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유형</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">사유</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">관리자</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">참조 ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">일시</th>
+        </tr></thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.transaction_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 700; color: {{ '#059669' if t.amount > 0 else '#dc2626' }};">{{ '{:+,}'.format(t.amount) }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+                    {% if t.transaction_type == 'mission_reward' %}
+                        <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">mission_reward</span>
+                    {% elif t.transaction_type == 'purchase' %}
+                        <span style="background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">purchase</span>
+                    {% elif t.transaction_type == 'manual' %}
+                        <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">manual</span>
+                    {% else %}
+                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ t.transaction_type }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.reason or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.admin_id or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.reference_id or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.created_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">거래 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
+
+# ==========================================================================
+# [HTML] F7: 포인트 상품 관리
+# ==========================================================================
+POINT_PRODUCTS_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>포인트 상품 관리</h1>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">포인트로 교환 가능한 상품(쿠폰)을 관리합니다.</p>
+
+<!-- 통계 카드 -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">전체 상품</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">활성 상품</div>
+        <div class="summary-value" style="color: #059669;">{{ active_count }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">비활성 상품</div>
+        <div class="summary-value" style="color: #dc2626;">{{ inactive_count }}</div>
+    </div>
+</div>
+
+<!-- 액션 버튼 -->
+<div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+    <a href="/point-products/add" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">상품 추가</a>
+    <a href="/point-products/purchases" style="padding: 10px 20px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 8px; font-weight: bold;">구매 내역 조회</a>
+</div>
+
+<!-- 상품 테이블 -->
+<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">상품명</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유형</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">포인트 가격</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">재고</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.product_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.product_name }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+                    <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.product_type }}</span>
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: {{ '#dc2626' if p.stock_quantity <= 5 else '#111827' }}; font-weight: {{ '700' if p.stock_quantity <= 5 else '400' }};">{{ p.stock_quantity }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    {% if p.is_active == 1 %}
+                        <span class="badge-on">활성</span>
+                    {% else %}
+                        <span class="badge-off">비활성</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    <div style="display: flex; gap: 6px; justify-content: center;">
+                        <a href="/point-products/{{ p.product_id }}/edit" style="padding: 4px 12px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">수정</a>
+                        <form action="/point-products/{{ p.product_id }}/toggle" method="post" style="display:inline;">
+                            <button type="submit" style="padding: 4px 12px; border: 1px solid {{ '#dc2626' if p.is_active == 1 else '#059669' }}; background: {{ '#fef2f2' if p.is_active == 1 else '#ecfdf5' }}; color: {{ '#dc2626' if p.is_active == 1 else '#059669' }}; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
+                                {{ '비활성' if p.is_active == 1 else '활성' }}
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">등록된 상품이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
+
+POINT_PRODUCT_FORM_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ '상품 수정' if product else '상품 추가' }}</h1>
+<a href="/point-products" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
+
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; max-width: 600px;">
+    <form method="post">
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">상품명</label>
+            <input type="text" name="product_name" value="{{ product.product_name if product else '' }}" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">상품 유형</label>
+            <select name="product_type" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
+                <option value="coupon" {% if product and product.product_type == 'coupon' %}selected{% endif %}>coupon (쿠폰)</option>
+                <option value="gift_card" {% if product and product.product_type == 'gift_card' %}selected{% endif %}>gift_card (상품권)</option>
+                <option value="discount" {% if product and product.product_type == 'discount' %}selected{% endif %}>discount (할인)</option>
+                <option value="merchandise" {% if product and product.product_type == 'merchandise' %}selected{% endif %}>merchandise (상품)</option>
+                <option value="experience" {% if product and product.product_type == 'experience' %}selected{% endif %}>experience (이용권)</option>
+            </select>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">설명</label>
+            <textarea name="description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; resize: vertical;">{{ product.description if product else '' }}</textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">포인트 가격</label>
+                <input type="number" name="point_cost" value="{{ product.point_cost if product else '' }}" min="1" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">재고 수량</label>
+                <input type="number" name="stock_quantity" value="{{ product.stock_quantity if product else '' }}" min="0" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+            </div>
+        </div>
+        <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">저장</button>
+    </form>
+</div>
+{% endblock %}
+"""
+
+POINT_PURCHASES_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>포인트 구매 내역</h1>
+<a href="/point-products" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">상품 목록으로 돌아가기</a>
+
+<!-- 통계 -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 구매 건수</div>
+        <div class="summary-value">{{ total_purchases }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 사용 포인트</div>
+        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(total_points_used) }}P</div>
+    </div>
+</div>
+
+<!-- 구매 내역 테이블 -->
+<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">구매 ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유저 ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">상품명</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">사용 포인트</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">구매일</th>
+        </tr></thead>
+        <tbody>
+            {% for p in purchases %}
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.purchase_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.user_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.product_name or '(삭제된 상품)' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    {% if p.status == 'completed' %}
+                        <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">completed</span>
+                    {% elif p.status == 'cancelled' %}
+                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">cancelled</span>
+                    {% else %}
+                        <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.purchased_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">구매 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
+
+# ==========================================================================
+# [HTML] F8: 회원 관리
+# ==========================================================================
+MEMBERS_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>회원 관리</h1>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">회원 목록을 조회하고 관리합니다.</p>
+
+<!-- 통계 카드 -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">전체 회원</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">활성 회원</div>
+        <div class="summary-value" style="color: #059669;">{{ active_count }}</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">정지 회원</div>
+        <div class="summary-value" style="color: #dc2626;">{{ suspended_count }}</div>
+    </div>
+</div>
+
+<!-- 검색/필터 + 회원 추가 버튼 -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+    <form method="get" action="/members" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="text" name="search_name" value="{{ search_name }}" placeholder="이름 검색..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 150px;">
+        <select name="search_status" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
+            <option value="">전체 상태</option>
+            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
+            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
+            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
+        </select>
+        <button type="submit" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">검색</button>
+        {% if search_name or search_status %}
+        <a href="/members" style="padding: 8px 16px; background: #9ca3af; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">초기화</a>
+        {% endif %}
+    </form>
+    <a href="/members/add" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">회원 추가</a>
+</div>
+
+<!-- 회원 테이블 -->
+<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">회원 ID</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">이름</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">이메일</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">전화번호</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">가입일</th>
+            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for u in members %}
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-family: monospace;">{{ u.user_id }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ u.user_name }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.email or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.phone or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    {% if u.status == 'active' %}
+                        <span style="background: #ecfdf5; color: #059669; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">활성</span>
+                    {% elif u.status == 'suspended' %}
+                        <span style="background: #fef2f2; color: #dc2626; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">정지</span>
+                    {% else %}
+                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">탈퇴</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.join_date or '-' }}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                    <a href="/members/{{ u.user_id }}" style="padding: 4px 12px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">상세</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">등록된 회원이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+"""
+
+MEMBER_DETAIL_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>회원 상세 정보</h1>
+<a href="/members" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
+
+<!-- 기본 정보 카드 -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; color: #1e3a8a;">기본 정보</h3>
+            <a href="/members/{{ user.user_id }}/edit" style="padding: 6px 16px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">수정</a>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563; width: 120px;">회원 ID</td><td style="padding: 8px 12px; font-family: monospace;">{{ user.user_id }}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">이름</td><td style="padding: 8px 12px;">{{ user.user_name }}</td></tr>
+            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">이메일</td><td style="padding: 8px 12px;">{{ user.email or '-' }}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">전화번호</td><td style="padding: 8px 12px;">{{ user.phone or '-' }}</td></tr>
+            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">가입일</td><td style="padding: 8px 12px;">{{ user.join_date or '-' }}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">메모</td><td style="padding: 8px 12px;">{{ user.memo or '-' }}</td></tr>
+        </table>
+    </div>
+
+    <!-- 상태 변경 + 삭제 -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+            <h3 style="margin: 0 0 1rem 0; color: #1e3a8a; font-size: 1rem;">현재 상태</h3>
+            <div style="text-align: center; margin-bottom: 1rem;">
+                {% if user.status == 'active' %}
+                    <span style="background: #ecfdf5; color: #059669; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">활성</span>
+                {% elif user.status == 'suspended' %}
+                    <span style="background: #fef2f2; color: #dc2626; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">정지</span>
+                {% else %}
+                    <span style="background: #f3f4f6; color: #6b7280; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">탈퇴</span>
+                {% endif %}
+            </div>
+            <form action="/members/{{ user.user_id }}/status" method="post" style="display: flex; gap: 8px;">
+                <select name="new_status" style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
+                    <option value="active" {% if user.status == 'active' %}selected{% endif %}>활성</option>
+                    <option value="suspended" {% if user.status == 'suspended' %}selected{% endif %}>정지</option>
+                    <option value="withdrawn" {% if user.status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
+                </select>
+                <button type="submit" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">변경</button>
+            </form>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #fee2e2;">
+            <h3 style="margin: 0 0 0.75rem 0; color: #991b1b; font-size: 1rem;">회원 삭제</h3>
+            <p style="color: #6b7280; font-size: 0.85rem; margin: 0 0 1rem 0;">삭제된 회원은 복구할 수 없습니다.</p>
+            <form action="/members/{{ user.user_id }}/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                <button type="submit" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">회원 삭제</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 포인트 요약 -->
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">포인트 잔액</div>
+        <div class="summary-value">{{ "{:,}".format(points.balance) }}P</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 지급</div>
+        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(points.total_earned) }}P</div>
+    </div>
+    <div class="summary-card" style="flex: 1;">
+        <div class="summary-label">총 사용</div>
+        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(points.total_spent) }}P</div>
+    </div>
+</div>
+
+<!-- 미션 현황 -->
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
+    <h3 style="margin: 0 0 1rem 0; color: #1e3a8a;">미션 현황 ({{ missions|length }}건)</h3>
+    {% if missions %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">미션명</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">유형</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: right;">보상 포인트</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">마감일</th>
+            </tr></thead>
+            <tbody>
+                {% for m in missions %}
+                <tr>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ m.mission_title }}</td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">
+                        <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ m.mission_type }}</span>
+                    </td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                        {% if m.status == 'completed' %}
+                            <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">완료</span>
+                        {% elif m.status == 'in_progress' %}
+                            <span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">진행중</span>
+                        {% elif m.status == 'expired' %}
+                            <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">만료</span>
+                        {% else %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">대기</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(m.reward_points) }}P</td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">{{ m.due_date or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #9ca3af; text-align: center; padding: 1rem;">미션 내역이 없습니다.</p>
+    {% endif %}
+</div>
+
+<!-- 포인트 구매 내역 -->
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+    <h3 style="margin: 0 0 1rem 0; color: #1e3a8a;">포인트 구매 내역 ({{ purchases|length }}건)</h3>
+    {% if purchases %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">상품명</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: right;">사용 포인트</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
+                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">구매일</th>
+            </tr></thead>
+            <tbody>
+                {% for p in purchases %}
+                <tr>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.product_name or '(삭제된 상품)' }}</td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                        {% if p.status == 'completed' %}
+                            <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">completed</span>
+                        {% elif p.status == 'cancelled' %}
+                            <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">cancelled</span>
+                        {% else %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">{{ p.purchased_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #9ca3af; text-align: center; padding: 1rem;">구매 내역이 없습니다.</p>
+    {% endif %}
+</div>
+{% endblock %}
+"""
+
+MEMBER_FORM_TEMPLATE = """
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ '회원 정보 수정' if user else '신규 회원 등록' }}</h1>
+<a href="/members" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
+
+<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; max-width: 600px;">
+    <form method="post">
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">회원 ID</label>
+            {% if user %}
+                <input type="text" value="{{ user.user_id }}" disabled style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; background: #f3f4f6; color: #6b7280;">
+            {% else %}
+                <input type="text" name="user_id" required placeholder="예: user_007" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+            {% endif %}
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">이름</label>
+            <input type="text" name="user_name" value="{{ user.user_name if user else '' }}" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">이메일</label>
+                <input type="email" name="email" value="{{ user.email if user else '' }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">전화번호</label>
+                <input type="text" name="phone" value="{{ user.phone if user else '' }}" placeholder="010-0000-0000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+            </div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">가입일</label>
+            <input type="date" name="join_date" value="{{ user.join_date if user else '' }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 6px;">메모</label>
+            <textarea name="memo" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; resize: vertical;">{{ user.memo if user and user.memo else '' }}</textarea>
+        </div>
+        <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">저장</button>
+    </form>
+</div>
+{% endblock %}
+"""
+
+# ==========================================================================
 # [함수] 로그 테이블 생성기, 인증, 통계
 # ==========================================================================
 
@@ -1265,13 +2033,435 @@ def mission_detail(mission_id):
         return redirect(url_for('missions'))
 
 # ==========================================================================
+# [라우트] F6: 포인트 관리
+# ==========================================================================
+
+@app.route('/points')
+@login_required
+def points():
+    try:
+        collector = DataCollector()
+        df = pd.read_sql("SELECT * FROM user_points ORDER BY updated_at DESC", collector.engine)
+        users_list = df.to_dict(orient='records')
+
+        total_balance = int(df['balance'].sum()) if not df.empty else 0
+        total_earned = int(df['total_earned'].sum()) if not df.empty else 0
+        total_spent = int(df['total_spent'].sum()) if not df.empty else 0
+
+        return render_template_string(POINTS_TEMPLATE,
+            users=users_list, user_count=len(users_list),
+            total_balance=total_balance, total_earned=total_earned, total_spent=total_spent)
+    except Exception as e:
+        flash(f"포인트 관리 로드 실패: {e}", 'error')
+        return redirect(url_for('index'))
+
+@app.route('/points/<user_id>')
+@login_required
+def point_detail(user_id):
+    try:
+        collector = DataCollector()
+        user_df = pd.read_sql("SELECT * FROM user_points WHERE user_id = %(uid)s",
+                               collector.engine, params={'uid': user_id})
+        if user_df.empty:
+            flash('해당 유저의 포인트 정보를 찾을 수 없습니다.', 'error')
+            return redirect(url_for('points'))
+        user = user_df.iloc[0].to_dict()
+
+        tx_df = pd.read_sql("SELECT * FROM point_transactions WHERE user_id = %(uid)s ORDER BY created_at DESC",
+                             collector.engine, params={'uid': user_id})
+        transactions = tx_df.to_dict(orient='records')
+
+        return render_template_string(POINT_DETAIL_TEMPLATE,
+            user_id=user_id, user=user, transactions=transactions)
+    except Exception as e:
+        flash(f"포인트 상세 로드 실패: {e}", 'error')
+        return redirect(url_for('points'))
+
+@app.route('/points/adjust', methods=['POST'])
+@login_required
+def points_adjust():
+    user_id = request.form.get('user_id', '').strip()
+    amount = request.form.get('amount', '0').strip()
+    reason = request.form.get('reason', '').strip()
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        flash('금액은 정수로 입력해주세요.', 'warning')
+        return redirect(url_for('points'))
+
+    if not user_id or amount == 0 or not reason:
+        flash('유저 ID, 금액(0 제외), 사유를 모두 입력하세요.', 'warning')
+        return redirect(url_for('points'))
+
+    try:
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            existing = conn.execute(
+                text("SELECT balance FROM user_points WHERE user_id = :uid"), {'uid': user_id}
+            ).fetchone()
+
+            if existing:
+                new_balance = existing[0] + amount
+                if new_balance < 0:
+                    flash(f'잔액 부족: 현재 {existing[0]}P, 차감 요청 {abs(amount)}P', 'warning')
+                    return redirect(url_for('points'))
+                if amount > 0:
+                    conn.execute(text(
+                        "UPDATE user_points SET balance = balance + :amt, total_earned = total_earned + :amt WHERE user_id = :uid"
+                    ), {'amt': amount, 'uid': user_id})
+                else:
+                    conn.execute(text(
+                        "UPDATE user_points SET balance = balance + :amt, total_spent = total_spent + :abs_amt WHERE user_id = :uid"
+                    ), {'amt': amount, 'abs_amt': abs(amount), 'uid': user_id})
+            else:
+                if amount < 0:
+                    flash('존재하지 않는 유저에게 포인트를 차감할 수 없습니다.', 'warning')
+                    return redirect(url_for('points'))
+                conn.execute(text(
+                    "INSERT INTO user_points (user_id, balance, total_earned, total_spent) VALUES (:uid, :amt, :amt, 0)"
+                ), {'uid': user_id, 'amt': amount})
+
+            conn.execute(text("""
+                INSERT INTO point_transactions (user_id, amount, transaction_type, reason, admin_id)
+                VALUES (:uid, :amt, 'manual', :reason, :admin)
+            """), {'uid': user_id, 'amt': amount, 'reason': reason, 'admin': 'admin'})
+            conn.commit()
+
+        action = "지급" if amount > 0 else "차감"
+        flash(f"{user_id}에게 {abs(amount):,} 포인트가 {action}되었습니다.", 'success')
+    except Exception as e:
+        flash(f"포인트 조정 실패: {e}", 'error')
+    return redirect(url_for('points'))
+
+# ==========================================================================
+# [라우트] F7: 포인트 상품 관리
+# ==========================================================================
+
+@app.route('/point-products')
+@login_required
+def point_products():
+    try:
+        collector = DataCollector()
+        df = pd.read_sql("SELECT * FROM point_products ORDER BY created_at DESC", collector.engine)
+        products_list = df.to_dict(orient='records')
+
+        active_count = sum(1 for p in products_list if p.get('is_active', 1) == 1)
+        inactive_count = len(products_list) - active_count
+
+        return render_template_string(POINT_PRODUCTS_TEMPLATE,
+            products=products_list, total_count=len(products_list),
+            active_count=active_count, inactive_count=inactive_count)
+    except Exception as e:
+        flash(f"포인트 상품 목록 로드 실패: {e}", 'error')
+        return redirect(url_for('index'))
+
+@app.route('/point-products/add', methods=['GET', 'POST'])
+@login_required
+def point_product_add():
+    if request.method == 'POST':
+        try:
+            collector = DataCollector()
+            with collector.engine.connect() as conn:
+                conn.execute(text("""
+                    INSERT INTO point_products (product_name, product_type, description, point_cost, stock_quantity, is_active)
+                    VALUES (:name, :ptype, :desc, :cost, :stock, 1)
+                """), {
+                    'name': request.form['product_name'],
+                    'ptype': request.form['product_type'],
+                    'desc': request.form.get('description', ''),
+                    'cost': int(request.form['point_cost']),
+                    'stock': int(request.form['stock_quantity']),
+                })
+                conn.commit()
+            flash("상품이 추가되었습니다.", 'success')
+            return redirect(url_for('point_products'))
+        except Exception as e:
+            flash(f"상품 추가 실패: {e}", 'error')
+
+    return render_template_string(POINT_PRODUCT_FORM_TEMPLATE, product=None)
+
+@app.route('/point-products/purchases')
+@login_required
+def point_purchases():
+    try:
+        collector = DataCollector()
+        df = pd.read_sql("""
+            SELECT pp.purchase_id, pp.user_id, p.product_name, pp.point_cost, pp.status, pp.purchased_at
+            FROM point_purchases pp
+            LEFT JOIN point_products p ON pp.product_id = p.product_id
+            ORDER BY pp.purchased_at DESC
+        """, collector.engine)
+        purchases_list = df.to_dict(orient='records')
+
+        total_points_used = int(df.loc[df['status'] == 'completed', 'point_cost'].sum()) if not df.empty else 0
+
+        return render_template_string(POINT_PURCHASES_TEMPLATE,
+            purchases=purchases_list, total_purchases=len(purchases_list),
+            total_points_used=total_points_used)
+    except Exception as e:
+        flash(f"구매 내역 로드 실패: {e}", 'error')
+        return redirect(url_for('point_products'))
+
+@app.route('/point-products/<int:product_id>/edit', methods=['GET', 'POST'])
+@login_required
+def point_product_edit(product_id):
+    try:
+        collector = DataCollector()
+        if request.method == 'POST':
+            with collector.engine.connect() as conn:
+                conn.execute(text("""
+                    UPDATE point_products
+                    SET product_name = :name, product_type = :ptype, description = :desc,
+                        point_cost = :cost, stock_quantity = :stock
+                    WHERE product_id = :pid
+                """), {
+                    'name': request.form['product_name'],
+                    'ptype': request.form['product_type'],
+                    'desc': request.form.get('description', ''),
+                    'cost': int(request.form['point_cost']),
+                    'stock': int(request.form['stock_quantity']),
+                    'pid': product_id,
+                })
+                conn.commit()
+            flash("상품이 수정되었습니다.", 'success')
+            return redirect(url_for('point_products'))
+
+        df = pd.read_sql("SELECT * FROM point_products WHERE product_id = %(id)s",
+                          collector.engine, params={'id': product_id})
+        if df.empty:
+            flash('상품을 찾을 수 없습니다.', 'error')
+            return redirect(url_for('point_products'))
+        product = df.iloc[0].to_dict()
+        return render_template_string(POINT_PRODUCT_FORM_TEMPLATE, product=product)
+    except Exception as e:
+        flash(f"상품 수정 실패: {e}", 'error')
+        return redirect(url_for('point_products'))
+
+@app.route('/point-products/<int:product_id>/toggle', methods=['POST'])
+@login_required
+def point_product_toggle(product_id):
+    try:
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            current = conn.execute(
+                text("SELECT is_active FROM point_products WHERE product_id = :pid"),
+                {'pid': product_id}
+            ).scalar()
+            new_val = 0 if current == 1 else 1
+            conn.execute(
+                text("UPDATE point_products SET is_active = :v WHERE product_id = :pid"),
+                {'v': new_val, 'pid': product_id}
+            )
+            conn.commit()
+        flash(f"상품이 {'활성' if new_val == 1 else '비활성'} 처리되었습니다.", 'success')
+    except Exception as e:
+        flash(f"상태 변경 실패: {e}", 'error')
+    return redirect(url_for('point_products'))
+
+# ==========================================================================
+# [라우트] F8: 회원 관리
+# ==========================================================================
+
+@app.route('/members')
+@login_required
+def members():
+    try:
+        collector = DataCollector()
+        search_name = request.args.get('search_name', '')
+        search_status = request.args.get('search_status', '')
+
+        query = "SELECT * FROM users WHERE 1=1"
+        params = {}
+        if search_name:
+            query += " AND user_name LIKE :name"
+            params['name'] = f"%{search_name}%"
+        if search_status:
+            query += " AND status = :status"
+            params['status'] = search_status
+        query += " ORDER BY created_at DESC"
+
+        with collector.engine.connect() as conn:
+            rows = conn.execute(text(query), params).fetchall()
+            columns = conn.execute(text(query), params).keys()
+            members_list = [dict(zip(columns, row)) for row in rows]
+
+            # 통계 (전체 기준)
+            total = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
+            active = conn.execute(text("SELECT COUNT(*) FROM users WHERE status = 'active'")).scalar()
+            suspended = conn.execute(text("SELECT COUNT(*) FROM users WHERE status = 'suspended'")).scalar()
+
+        return render_template_string(MEMBERS_TEMPLATE,
+            members=members_list, total_count=total,
+            active_count=active, suspended_count=suspended,
+            search_name=search_name, search_status=search_status)
+    except Exception as e:
+        flash(f"회원 목록 로드 실패: {e}", 'error')
+        return redirect(url_for('index'))
+
+@app.route('/members/add', methods=['GET', 'POST'])
+@login_required
+def member_add():
+    if request.method == 'POST':
+        try:
+            collector = DataCollector()
+            with collector.engine.connect() as conn:
+                # 중복 체크
+                existing = conn.execute(
+                    text("SELECT 1 FROM users WHERE user_id = :uid"),
+                    {'uid': request.form['user_id']}
+                ).fetchone()
+                if existing:
+                    flash("이미 존재하는 회원 ID입니다.", 'error')
+                    return render_template_string(MEMBER_FORM_TEMPLATE, user=None)
+
+                conn.execute(text("""
+                    INSERT INTO users (user_id, user_name, email, phone, join_date, memo)
+                    VALUES (:uid, :name, :email, :phone, :join_date, :memo)
+                """), {
+                    'uid': request.form['user_id'],
+                    'name': request.form['user_name'],
+                    'email': request.form.get('email', ''),
+                    'phone': request.form.get('phone', ''),
+                    'join_date': request.form.get('join_date') or None,
+                    'memo': request.form.get('memo', ''),
+                })
+                conn.commit()
+            flash("회원이 등록되었습니다.", 'success')
+            return redirect(url_for('members'))
+        except Exception as e:
+            flash(f"회원 등록 실패: {e}", 'error')
+
+    return render_template_string(MEMBER_FORM_TEMPLATE, user=None)
+
+@app.route('/members/<user_id>')
+@login_required
+def member_detail(user_id):
+    try:
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            # 기본 정보
+            row = conn.execute(
+                text("SELECT * FROM users WHERE user_id = :uid"), {'uid': user_id}
+            ).fetchone()
+            if not row:
+                flash("회원을 찾을 수 없습니다.", 'error')
+                return redirect(url_for('members'))
+            columns = conn.execute(text("SELECT * FROM users LIMIT 0")).keys()
+            user = dict(zip(columns, row))
+
+            # 포인트 정보
+            pt_row = conn.execute(
+                text("SELECT balance, total_earned, total_spent FROM user_points WHERE user_id = :uid"),
+                {'uid': user_id}
+            ).fetchone()
+            points = {'balance': pt_row[0], 'total_earned': pt_row[1], 'total_spent': pt_row[2]} if pt_row else {'balance': 0, 'total_earned': 0, 'total_spent': 0}
+
+        # 미션 목록
+        missions_df = pd.read_sql(
+            "SELECT mission_title, mission_type, status, reward_points, due_date FROM missions WHERE user_id = %(uid)s ORDER BY created_at DESC",
+            collector.engine, params={'uid': user_id}
+        )
+        missions_list = missions_df.to_dict(orient='records')
+
+        # 구매 내역
+        purchases_df = pd.read_sql("""
+            SELECT pp.point_cost, pp.status, pp.purchased_at, p.product_name
+            FROM point_purchases pp
+            LEFT JOIN point_products p ON pp.product_id = p.product_id
+            WHERE pp.user_id = %(uid)s
+            ORDER BY pp.purchased_at DESC
+        """, collector.engine, params={'uid': user_id})
+        purchases_list = purchases_df.to_dict(orient='records')
+
+        return render_template_string(MEMBER_DETAIL_TEMPLATE,
+            user=user, points=points, missions=missions_list, purchases=purchases_list)
+    except Exception as e:
+        flash(f"회원 상세 로드 실패: {e}", 'error')
+        return redirect(url_for('members'))
+
+@app.route('/members/<user_id>/edit', methods=['GET', 'POST'])
+@login_required
+def member_edit(user_id):
+    try:
+        collector = DataCollector()
+        if request.method == 'POST':
+            with collector.engine.connect() as conn:
+                conn.execute(text("""
+                    UPDATE users SET user_name = :name, email = :email, phone = :phone,
+                        join_date = :join_date, memo = :memo
+                    WHERE user_id = :uid
+                """), {
+                    'name': request.form['user_name'],
+                    'email': request.form.get('email', ''),
+                    'phone': request.form.get('phone', ''),
+                    'join_date': request.form.get('join_date') or None,
+                    'memo': request.form.get('memo', ''),
+                    'uid': user_id,
+                })
+                conn.commit()
+            flash("회원 정보가 수정되었습니다.", 'success')
+            return redirect(f'/members/{user_id}')
+
+        with collector.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT * FROM users WHERE user_id = :uid"), {'uid': user_id}
+            ).fetchone()
+            if not row:
+                flash("회원을 찾을 수 없습니다.", 'error')
+                return redirect(url_for('members'))
+            columns = conn.execute(text("SELECT * FROM users LIMIT 0")).keys()
+            user = dict(zip(columns, row))
+
+        return render_template_string(MEMBER_FORM_TEMPLATE, user=user)
+    except Exception as e:
+        flash(f"회원 수정 실패: {e}", 'error')
+        return redirect(url_for('members'))
+
+@app.route('/members/<user_id>/status', methods=['POST'])
+@login_required
+def member_status(user_id):
+    try:
+        new_status = request.form.get('new_status')
+        if new_status not in ('active', 'suspended', 'withdrawn'):
+            flash("유효하지 않은 상태값입니다.", 'error')
+            return redirect(f'/members/{user_id}')
+
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            conn.execute(
+                text("UPDATE users SET status = :status WHERE user_id = :uid"),
+                {'status': new_status, 'uid': user_id}
+            )
+            conn.commit()
+
+        status_labels = {'active': '활성', 'suspended': '정지', 'withdrawn': '탈퇴'}
+        flash(f"회원 상태가 '{status_labels[new_status]}'(으)로 변경되었습니다.", 'success')
+    except Exception as e:
+        flash(f"상태 변경 실패: {e}", 'error')
+    return redirect(f'/members/{user_id}')
+
+@app.route('/members/<user_id>/delete', methods=['POST'])
+@login_required
+def member_delete(user_id):
+    try:
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            conn.execute(text("DELETE FROM users WHERE user_id = :uid"), {'uid': user_id})
+            conn.commit()
+        flash("회원이 삭제되었습니다.", 'success')
+    except Exception as e:
+        flash(f"회원 삭제 실패: {e}", 'error')
+    return redirect(url_for('members'))
+
+# ==========================================================================
 # [라우트] 데이터 조회, 시뮬레이터 (기존 기능 유지)
 # ==========================================================================
 
 @app.route('/data/<table_name>')
 @login_required
 def view_data(table_name):
-    allowed_tables = ['raw_loan_products', 'raw_economic_indicators', 'raw_income_stats', 'collection_logs', 'service_config', 'missions']
+    allowed_tables = ['raw_loan_products', 'raw_economic_indicators', 'raw_income_stats', 'collection_logs', 'service_config', 'missions', 'user_points', 'point_transactions', 'point_products', 'point_purchases', 'users']
     if table_name not in allowed_tables:
         flash(f"허용되지 않은 테이블입니다: {table_name}", "error")
         return redirect(url_for('index'))
