@@ -114,6 +114,18 @@ class DataCollector:
                 print(f"Connection failed. Retrying... ({attempt + 1}/{max_retries})")
                 time.sleep(2)
 
+    def _get_config(self, config_key, default=None):
+        """DB에서 설정값 조회"""
+        try:
+            with self.engine.connect() as conn:
+                val = conn.execute(
+                    text("SELECT config_value FROM service_config WHERE config_key = :k"),
+                    {'k': config_key}
+                ).scalar()
+                return val if val is not None else default
+        except Exception:
+            return default
+
     def collect_fss_loan_products(self):
         """1. 금융감독원 API: 대출 상품 정보 수집"""
         source_name = "FSS_LOAN_API"
@@ -121,16 +133,50 @@ class DataCollector:
             self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
             return
         try:
-            mock_data = [
-                {'bank_name': '우리은행', 'product_name': 'WON직장인대출', 'loan_rate_min': 3.5, 'loan_rate_max': 4.5, 'loan_limit': 100000000},
-                {'bank_name': '카카오뱅크', 'product_name': '신용대출', 'loan_rate_min': 3.2, 'loan_rate_max': 5.0, 'loan_limit': 150000000}
-            ]
-            df = pd.DataFrame(mock_data)
-            self._replace_table('raw_loan_products', df)
-            self._log_status(source_name, "SUCCESS", len(df))
+            api_key = self._get_config('API_KEY_FSS')
+            period = self._get_config('COLLECTION_PERIOD_FSS_LOAN', '0')
+            
+            if api_key:
+                # 실제 API 호출 (예시 URL)
+                url = "http://finlife.fss.or.kr/finlifeapi/creditLoanProductsSearch.json"
+                params = {
+                    'auth': api_key,
+                    'topFinGrpNo': '020000',
+                    'pageNo': 1
+                }
+                # response = self._fetch_with_retry(lambda: requests.get(url, params=params))
+                # data = response.json()
+                # if data['result']['err_cd'] == '000':
+                #     products = data['result']['baseList']
+                #     df = pd.DataFrame(products)
+                #     self._replace_table('raw_loan_products', df)
+                #     self._log_status(source_name, "SUCCESS", len(df))
+                # else:
+                #     raise Exception(f"API Error: {data['result']['err_msg']}")
+                
+                # [데모용] API Key가 있어도 실제 호출은 주석 처리하고 Mock 데이터 사용 (키가 유효하지 않을 수 있으므로)
+                # 실제 구현 시 위 주석을 해제하고 아래 Mock 로직을 제거하세요.
+                print(f"[{source_name}] API Key detected. Period: {period} months. (Simulating API Call...)")
+                self._collect_fss_mock(source_name)
+            else:
+                print(f"[{source_name}] No API Key. Using Mock Data.")
+                self._collect_fss_mock(source_name)
+                
         except Exception:
             error_msg = traceback.format_exc()
             self._log_status(source_name, "FAIL", 0, error_msg)
+
+    def _collect_fss_mock(self, source_name):
+        """금융감독원 가상 데이터 수집"""
+        mock_data = [
+            {'bank_name': '우리은행', 'product_name': 'WON직장인대출', 'loan_rate_min': 3.5, 'loan_rate_max': 4.5, 'loan_limit': 100000000},
+            {'bank_name': '카카오뱅크', 'product_name': '신용대출', 'loan_rate_min': 3.2, 'loan_rate_max': 5.0, 'loan_limit': 150000000},
+            {'bank_name': '토스뱅크', 'product_name': '토스신용대출', 'loan_rate_min': 3.8, 'loan_rate_max': 6.5, 'loan_limit': 200000000},
+            {'bank_name': '신한은행', 'product_name': '쏠편한 직장인대출', 'loan_rate_min': 4.1, 'loan_rate_max': 5.2, 'loan_limit': 120000000}
+        ]
+        df = pd.DataFrame(mock_data)
+        self._replace_table('raw_loan_products', df)
+        self._log_status(source_name, "SUCCESS (MOCK)", len(df))
 
     def collect_kosis_income_stats(self):
         """2. 통계청 API: 연령별/소득구간별 소득 통계 수집"""
@@ -140,17 +186,29 @@ class DataCollector:
             return
         print(f"--- {source_name} 수집 시작 ---")
         try:
-            mock_data = [
-                {'age_group': '20대', 'income_decile': 5, 'avg_income': 32000000},
-                {'age_group': '30대', 'income_decile': 5, 'avg_income': 54000000},
-                {'age_group': '40대', 'income_decile': 5, 'avg_income': 68000000}
-            ]
-            df = pd.DataFrame(mock_data)
-            self._replace_table('raw_income_stats', df)
-            self._log_status(source_name, "SUCCESS", len(df))
+            api_key = self._get_config('API_KEY_KOSIS')
+            period = self._get_config('COLLECTION_PERIOD_KOSIS_INCOME', '0')
+            if api_key:
+                # 실제 API 호출 로직 (구현 필요)
+                print(f"[{source_name}] API Key detected. Period: {period} months. (Simulating API Call...)")
+                self._collect_kosis_mock(source_name)
+            else:
+                self._collect_kosis_mock(source_name)
         except Exception:
             error_msg = traceback.format_exc()
             self._log_status(source_name, "FAIL", 0, error_msg)
+
+    def _collect_kosis_mock(self, source_name):
+        """통계청 가상 데이터 수집"""
+        mock_data = [
+            {'age_group': '20대', 'income_decile': 5, 'avg_income': 32000000},
+            {'age_group': '30대', 'income_decile': 5, 'avg_income': 54000000},
+            {'age_group': '40대', 'income_decile': 5, 'avg_income': 68000000},
+            {'age_group': '50대', 'income_decile': 5, 'avg_income': 75000000}
+        ]
+        df = pd.DataFrame(mock_data)
+        self._replace_table('raw_income_stats', df)
+        self._log_status(source_name, "SUCCESS (MOCK)", len(df))
 
     def collect_economic_indicators(self):
         """3,4,5. 경제 지표 통합 수집 (부동산, 금리, 고용)"""
@@ -159,17 +217,28 @@ class DataCollector:
             self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
             return
         try:
-            indicators = [
-                {'indicator_type': 'COFIX', 'region': 'NATIONWIDE', 'indicator_value': 3.85, 'reference_date': '2023-10-15'},
-                {'indicator_type': 'ESTATE_PRICE_INDEX', 'region': 'SEOUL', 'indicator_value': 102.5, 'reference_date': '2023-10-01'},
-                {'indicator_type': 'EMPLOYMENT_RATE', 'region': 'MANUFACTURING', 'indicator_value': 95.2, 'reference_date': '2023-09-01'}
-            ]
-            df = pd.DataFrame(indicators)
-            self._replace_table('raw_economic_indicators', df)
-            self._log_status(source_name, "SUCCESS", len(df))
+            api_key = self._get_config('API_KEY_ECOS')
+            period = self._get_config('COLLECTION_PERIOD_ECONOMIC', '0')
+            if api_key:
+                # 실제 API 호출 로직 (구현 필요)
+                print(f"[{source_name}] API Key detected. Period: {period} months. (Simulating API Call...)")
+                self._collect_economic_mock(source_name)
+            else:
+                self._collect_economic_mock(source_name)
         except Exception:
             error_msg = traceback.format_exc()
             self._log_status(source_name, "FAIL", 0, error_msg)
+
+    def _collect_economic_mock(self, source_name):
+        """경제지표 가상 데이터 수집"""
+        indicators = [
+            {'indicator_type': 'COFIX', 'region': 'NATIONWIDE', 'indicator_value': 3.85, 'reference_date': '2023-10-15'},
+            {'indicator_type': 'ESTATE_PRICE_INDEX', 'region': 'SEOUL', 'indicator_value': 102.5, 'reference_date': '2023-10-01'},
+            {'indicator_type': 'EMPLOYMENT_RATE', 'region': 'MANUFACTURING', 'indicator_value': 95.2, 'reference_date': '2023-09-01'}
+        ]
+        df = pd.DataFrame(indicators)
+        self._replace_table('raw_economic_indicators', df)
+        self._log_status(source_name, "SUCCESS (MOCK)", len(df))
 
     def run_all(self):
         """모든 수집 작업 일괄 실행"""

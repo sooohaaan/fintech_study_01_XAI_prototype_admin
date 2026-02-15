@@ -112,7 +112,7 @@
                             {{ 'ON' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'OFF' }}
                         </span>
                         <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="loan" class="refresh-btn" title="금감원 대출상품 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                            <button type="submit" name="job" value="loan" class="refresh-btn" title="금감원 대출상품 데이터를 지금 즉시 새로고침(수집)합니다.">새로고침</button>
                         </form>
                     </div>
                 </div>
@@ -133,7 +133,7 @@
                             {{ 'ON' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'OFF' }}
                         </span>
                         <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="economy" class="refresh-btn" title="경제 지표 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                            <button type="submit" name="job" value="economy" class="refresh-btn" title="경제 지표 데이터를 지금 즉시 새로고침(수집)합니다.">새로고침</button>
                         </form>
                     </div>
                 </div>
@@ -154,7 +154,7 @@
                             {{ 'ON' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'OFF' }}
                         </span>
                         <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="income" class="refresh-btn" title="통계청 소득정보를 지금 즉시 수동 수집합니다.">새로고침</button>
+                            <button type="submit" name="job" value="income" class="refresh-btn" title="통계청 소득정보를 지금 즉시 새로고침(수집)합니다.">새로고침</button>
                         </form>
                     </div>
                 </div>
