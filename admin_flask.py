@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, __version__ as flask_version
 from functools import wraps
 from collector import DataCollector
 from recommendation_logic import recommend_products
@@ -6,14 +6,1965 @@ import pandas as pd
 import sys
 import os
 from sqlalchemy import text
+from datetime import datetime, timedelta
+import platform
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 # Flask 앱 초기화
-app = Flask(__name__, template_folder='.')
+# 정적 파일 경로를 절대 경로로 설정하여 실행 위치에 상관없이 찾을 수 있도록 함
+basedir = os.path.abspath(os.path.dirname(__file__))
+static_dir = os.path.join(basedir, 'static')
+template_dir = os.path.join(basedir, 'templates')
+components_dir = os.path.join(template_dir, 'components')
+
+# static 폴더가 없으면 자동 생성 (CSS 파일 경로 문제 방지)
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+
+# templates 폴더가 없으면 자동 생성
+if not os.path.exists(template_dir):
+    os.makedirs(template_dir)
+
+# templates/components 폴더가 없으면 자동 생성
+if not os.path.exists(components_dir):
+    os.makedirs(components_dir)
+
+# [Self-Repair] CSS 파일이 없으면 자동 생성 (경로 문제 원천 차단)
+style_css_path = os.path.join(static_dir, 'style.css')
+login_css_path = os.path.join(static_dir, 'login.css')
+
+# Always overwrite style.css to apply latest improvements
+with open(style_css_path, 'w', encoding='utf-8') as f:
+    f.write("""/* === CSS Variables === */
+:root {
+    /* Brand Colors */
+    --visionary-black: #000000;
+    --pure-white: #FFFFFF;
+    --insight-gold: #E5AA70;
+    --insight-gold-hover: #D4955D;
+    --evidence-grey: #8E8E8E;
+    --slate-blue-grey: #4A5568;
+
+    --primary: var(--insight-gold);
+    --primary-hover: var(--insight-gold-hover);
+    --accent: var(--insight-gold);
+    --accent-hover: var(--insight-gold-hover);
+    
+    --bg-page: #F8F9FA; --bg-card: var(--pure-white); --bg-soft: #F3F4F6; --bg-input: var(--pure-white);
+    --text-main: var(--visionary-black); --text-sub: var(--slate-blue-grey); --text-muted: var(--evidence-grey);
+    --border: #E5E7EB; --border-light: #F3F4F6; --th-bg: #F9FAFB;
+    
+    --success-bg: #ecfdf5; --success-fg: #059669;
+    --warning-bg: #FFFBEB; --warning-fg: #D97706;
+    --danger-bg: #FEF2F2;  --danger-fg: #DC2626;
+    --info-bg: #FDF6E3;    --info-fg: #B7791F; /* Gold-ish info color */
+    --neutral-bg: #F3F4F6; --neutral-fg: var(--slate-blue-grey);
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --radius-card: 16px;
+    --radius-btn: 10px;
+    --radius-badge: 9999px;
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html.dark {
+    --primary: #E5AA70;
+    --primary-hover: #D4955D;
+    --accent: #E5AA70;
+    --accent-hover: #D4955D;
+    --bg-page: #121212; --bg-card: #1E1E1E; --bg-soft: #2C2C2C; --bg-input: #2C2C2C;
+    --text-main: #FFFFFF; --text-sub: #A0A0A0; --text-muted: #6E6E6E;
+    --border: #333333; --border-light: #333333; --th-bg: #1E1E1E;
+    --neutral-bg: #333333; --neutral-fg: #A0A0A0;
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.2);
+}
+
+/* === Base === */
+body { 
+    font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; 
+    background-color: var(--bg-page); 
+    /* The Narrative Grid: Subtle grid pattern for logical structure */
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--text-main); margin: 0; padding: 0; letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s; line-height: 1.5; }
+h1 { color: var(--text-main); font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem 0; letter-spacing: -0.025em; }
+
+/* === Layout: Sidebar & Main === */
+.app-container { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; transition: transform 0.3s ease; }
+/* The Precision Star: Highlight brand identity in header */
+.sidebar-header { padding: 1.5rem; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-light); }
+.sidebar-header h2 { font-size: 1.25rem; font-weight: 800; color: var(--primary); margin: 0; letter-spacing: -0.02em; }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 1rem; }
+.nav-section { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; letter-spacing: 0.05em; }
+.nav-section:first-child { margin-top: 0; }
+
+.nav-item { display: flex; align-items: center; padding: 0.75rem; color: var(--text-sub); text-decoration: none; border-radius: var(--radius-btn); font-weight: 500; margin-bottom: 4px; transition: var(--transition); font-size: 0.9rem; gap: 10px; }
+.nav-icon { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+.nav-item:hover { background-color: var(--bg-soft); color: var(--text-main); }
+.nav-item.active { background-color: var(--bg-soft); color: var(--primary); font-weight: 700; border-left: 3px solid var(--primary); border-radius: 4px; padding-left: calc(0.75rem - 3px); box-shadow: var(--shadow-sm); }
+.nav-item.active .nav-icon { opacity: 1; stroke: var(--primary); }
+
+.sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* Main Content */
+.main-content { flex: 1; margin-left: 260px; padding: 2rem; max-width: 100%; box-sizing: border-box; transition: margin-left 0.3s ease; }
+.top-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1.5rem; height: 40px; }
+
+/* Mobile Responsive Header */
+.mobile-header { display: none; padding: 1rem; background: var(--bg-card); border-bottom: 1px solid var(--border); align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 40; }
+.mobile-toggle { background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); padding: 0.25rem; display: flex; align-items: center; justify-content: center; }
+.overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 45; backdrop-filter: blur(2px); }
+
+/* === Components === */
+.theme-toggle { padding: 8px; background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 1.1rem; line-height: 1; transition: var(--transition); color: var(--text-sub); display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; }
+.theme-toggle:hover { background: var(--bg-soft); color: var(--text-main); border-color: var(--text-muted); }
+.nav-btn { padding: 8px 16px; text-decoration: none; border-radius: var(--radius-btn); font-size: 0.85rem; font-weight: 600; transition: var(--transition); background-color: var(--bg-card); color: var(--text-sub); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px; }
+.nav-btn:hover { background-color: var(--bg-soft); color: var(--text-main); border-color: var(--text-muted); }
+.nav-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+
+/* === Dashboard & Cards === */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
+.card { background: var(--bg-card); border-radius: var(--radius-card); box-shadow: var(--shadow-sm); border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; transition: var(--transition); position: relative; }
+.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background-color: var(--bg-card); }
+.card-title-group { display: flex; flex-direction: column; gap: 0.25rem; }
+.card-title { font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0; }
+.last-run { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+.card-actions { display: flex; align-items: center; gap: 8px; }
+.refresh-btn { padding: 6px 12px; background-color: transparent; color: var(--primary); border: 1px solid var(--primary); border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition); white-space: nowrap; }
+.refresh-btn:hover { background-color: var(--primary); color: white; }
+.card-body { padding: 0; flex-grow: 1; display: flex; flex-direction: column; }
+.card-p { padding: 1.5rem; }
+
+/* === Alerts & Badges === */
+.alert { padding: 1rem; margin-bottom: 1.5rem; border-radius: var(--radius-btn); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.success { background-color: var(--success-bg); color: var(--success-fg); border: 1px solid rgba(5, 150, 105, 0.2); }
+.error { background-color: var(--danger-bg); color: var(--danger-fg); border: 1px solid rgba(220, 38, 38, 0.2); }
+.warning { background-color: var(--warning-bg); color: var(--warning-fg); border: 1px solid rgba(217, 119, 6, 0.2); }
+
+/* === Tables & Logs === */
+.log-table-container { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
+th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-light); }
+th { background-color: var(--th-bg); color: var(--text-sub); font-weight: 600; position: sticky; top: 0; z-index: 10; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td { color: var(--text-main); }
+tbody tr { transition: background-color 0.15s; }
+tbody tr:hover { background-color: var(--bg-soft); }
+th.text-right, td.text-right { text-align: right; }
+th.text-center, td.text-center { text-align: center; }
+.table-wrapper { overflow-x: auto; background: var(--bg-card); border-radius: var(--radius-card); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+
+/* === Status Indicators === */
+.badge { padding: 4px 10px; border-radius: var(--radius-badge); font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; line-height: 1; }
+.badge-success { background: var(--success-bg); color: var(--success-fg); }
+.badge-warning { background: var(--warning-bg); color: var(--warning-fg); }
+.badge-danger { background: var(--danger-bg); color: var(--danger-fg); }
+.badge-info { background: var(--info-bg); color: var(--info-fg); }
+.badge-neutral { background: var(--neutral-bg); color: var(--neutral-fg); }
+.badge-on { background: var(--success-bg); color: var(--success-fg); padding: 4px 12px; border-radius: var(--radius-btn); font-size: 0.75rem; font-weight: 700; }
+.badge-off { background: var(--neutral-bg); color: var(--neutral-fg); padding: 4px 12px; border-radius: var(--radius-btn); font-size: 0.75rem; font-weight: 700; }
+.badge-lg { padding: 6px 16px; font-size: 0.85rem; }
+
+/* === Summary & Banners === */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.summary-card { background: var(--bg-card); padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-sm); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: var(--transition); }
+.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.summary-value { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
+.summary-label { color: var(--text-sub); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.help-text { font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 0 0; line-height: 1.4; }
+.info-banner { background: var(--info-bg); border: 1px solid rgba(229, 170, 112, 0.3); border-radius: var(--radius-btn); padding: 1rem; color: #8D5A18; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5; display: flex; gap: 12px; align-items: flex-start; }
+.warn-banner { background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-btn); padding: 1rem; color: var(--warning-fg); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5; }
+
+/* === Forms & Buttons === */
+input, select, textarea { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); border-radius: var(--radius-btn); transition: var(--transition); font-family: inherit; }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1); }
+button { padding: 0.75rem 1.5rem; border: none; border-radius: var(--radius-btn); background-color: var(--primary); color: white; font-weight: 600; cursor: pointer; transition: var(--transition); font-size: 0.95rem; }
+button:hover { background-color: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.btn-accent { background-color: var(--text-main); color: var(--bg-card); }
+.btn-accent:hover { background-color: var(--accent-hover); }
+.btn-outline-danger { padding: 6px 14px; background: transparent; color: var(--danger-fg); border: 1px solid var(--danger-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.btn-outline-danger:hover { background: var(--danger-bg); }
+.btn-outline-success { padding: 6px 14px; background: transparent; color: var(--success-fg); border: 1px solid var(--success-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.btn-outline-success:hover { background: var(--success-bg); }
+.form-inline { margin: 0; }
+.form-group { margin-bottom: 1.25rem; }
+.form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main); font-size: 0.9rem; }
+.form-input, .form-select, .form-textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: var(--bg-input); color: var(--text-main); font-size: 0.95rem; }
+.form-textarea { resize: vertical; min-height: 100px; }
+
+/* === System Status Bar === */
+.system-status-bar { display: flex; gap: 1.5rem; background: var(--bg-card); padding: 0.75rem 1.5rem; border-radius: var(--radius-card); border: 1px solid var(--border); margin-bottom: 2rem; align-items: center; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
+.status-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; text-decoration: none; color: inherit; padding: 4px 8px; border-radius: 6px; transition: var(--transition); }
+.status-item:hover { background-color: var(--bg-soft); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dot-success { background-color: var(--success-fg); box-shadow: 0 0 0 2px var(--success-bg); }
+.dot-danger { background-color: var(--danger-fg); box-shadow: 0 0 0 2px var(--danger-bg); }
+.dot-warning { background-color: var(--warning-fg); box-shadow: 0 0 0 2px var(--warning-bg); }
+.dot-info { background-color: var(--primary); box-shadow: 0 0 0 2px rgba(229, 170, 112, 0.4); }
+.status-label { font-weight: 600; color: var(--text-sub); }
+.status-value { font-weight: 700; color: var(--text-main); font-family: monospace; }
+.spacer { flex: 1; }
+.version-text { color: var(--text-muted); font-size: 0.8rem; }
+
+/* === Utilities === */
+.w-full { width: 100%; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-0 { margin-top: 0; }
+.mt-2 { margin-top: 0.5rem; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-bold { font-weight: 700; }
+.text-sm { font-size: 0.85rem; }
+.text-lg { font-size: 1.1rem; }
+.text-primary { color: var(--primary); }
+.text-success { color: var(--success-fg); }
+.text-danger { color: var(--danger-fg); }
+.text-sub { color: var(--text-sub); }
+.text-muted { color: var(--text-muted); }
+.bg-soft { background-color: var(--bg-soft); }
+.rounded-lg { border-radius: 8px; }
+.flex-1 { flex: 1; }
+.p-4 { padding: 1rem; }
+.p-2 { padding: 0.5rem; }
+.mobile-header-content { display: flex; align-items: center; gap: 10px; }
+.mobile-title { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+.logout-link { color: var(--danger-fg); padding: 0.75rem; font-size: 0.9rem; margin: 0; font-weight: 600; }
+.logout-link:hover { background-color: var(--danger-bg); color: var(--danger-fg); }
+.logout-icon { width: 18px; height: 18px; }
+.th-w-30 { width: 30%; }
+.th-w-15 { width: 15%; }
+.th-w-40 { width: 40%; }
+.mt-neg-1 { margin-top: -1rem; }
+.nowrap { white-space: nowrap; }
+.h-fit { height: fit-content; }
+.dashed-border { border: 2px dashed var(--border); }
+.text-green-500 { color: #10b981; }
+.text-orange-500 { color: #f59e0b; }
+.w-150 { width: 150px; }
+.w-120 { width: 120px; }
+.min-w-150 { min-width: 150px; }
+.min-w-120 { min-width: 120px; }
+.min-w-200 { min-width: 200px; }
+.flex-2 { flex: 2; }
+.max-w-600 { max-width: 600px; }
+.bg-border-light { background-color: var(--border-light); }
+.border-danger { border-color: var(--danger-bg); }
+.w-auto { width: auto; }
+.text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
+.border-b { border-bottom: 1px solid var(--border-light); }
+.text-left { text-align: left; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
+
+/* Grid Systems */
+.grid-auto-fit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+.grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+
+/* Credit Weights Card */
+.credit-weights-body { display: flex; justify-content: space-around; align-items: center; padding: 1rem 0; }
+.weight-item { text-align: center; flex: 1; }
+.weight-item.middle { border-left: 1px solid var(--border-light); border-right: 1px solid var(--border-light); }
+.weight-label { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
+.weight-value { font-size: 1.5rem; font-weight: 800; }
+
+/* Guide Card */
+/* The Precision Star: Highlight core message with accent color border */
+.guide-card { border-left: 4px solid var(--primary); background: var(--bg-card); margin-bottom: 2rem; box-shadow: var(--shadow-md); }
+
+/* === Responsive Design === */
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.active { transform: translateX(0); box-shadow: 4px 0 16px rgba(0,0,0,0.1); }
+    .main-content { margin-left: 0; padding: 1rem; }
+    .mobile-header { display: flex; }
+    .top-bar { display: none; }
+    .overlay.active { display: block; }
+    body.sidebar-open { overflow: hidden; }
+
+    /* Grid & Flex Adjustments */
+    .grid-2, .grid-3, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr !important; }
+    .system-status-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .status-item { width: 100%; justify-content: space-between; }
+    .spacer { display: none; }
+    
+    /* Credit Weights Card */
+    .credit-weights-body { flex-direction: column; gap: 1.5rem; }
+    .weight-item.middle { border: none; padding: 1rem 0; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); width: 100%; }
+
+    /* Summary Grid */
+    .summary-grid { grid-template-columns: 1fr; }
+}""")
+
+# Always overwrite login.css to apply latest brand colors
+with open(login_css_path, 'w', encoding='utf-8') as f:
+    f.write(""":root {
+    --primary: #E5AA70; --primary-hover: #D4955D;
+    --accent: #E5AA70;
+    --accent-hover: #D4955D;
+    --bg-page: #F8F9FA; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
+    --text-main: #000000; --text-sub: #4A5568;
+    --border: #E7E7E7;
+    --danger-fg: #dc2626;
+    --shadow-md: 0 3px 4px -1px rgba(0,0,0,0.1), 0 1px 3px -1px rgba(0,0,0,0.1);
+    --radius-card: 14px; --radius-btn: 12px;
+}
+html.dark {
+    --primary: #E5AA70; --primary-hover: #D4955D;
+    --accent: #E5AA70;
+    --accent-hover: #D4955D;
+    --bg-page: #121212; --bg-card: #1E1E1E; --bg-input: #2C2C2C;
+    --text-main: #FFFFFF; --text-sub: #A0A0A0;
+    --border: #4F4F4F;
+    --shadow-md: 0 3px 4px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2);
+}
+body { font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background-color: var(--bg-page); color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s; }
+.login-container { background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-md); width: 100%; max-width: 400px; border: 1px solid var(--border); transition: background-color 0.3s, border-color 0.3s; }
+h1 { color: var(--primary); text-align: center; margin-bottom: 2rem; font-size: 1.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-btn); box-sizing: border-box; background: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
+input:focus { border-color: var(--primary); outline: none; }
+button { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: var(--radius-btn); font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+button:hover { background-color: var(--primary-hover); }
+.error { color: var(--danger-fg); text-align: center; margin-top: 1rem; font-size: 0.9rem; }""")
+
+# [Self-Repair] 주요 HTML 템플릿 파일 자동 생성
+templates_to_create = {
+    'base.html': """<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    {% block head_meta %}{% endblock %}
+    <title>TrustFin Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=16" type="text/css">
+    <script>
+        (function() {
+            var saved = localStorage.getItem('adminTheme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <div class="overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+        
+        <!-- Mobile Header -->
+        <div class="mobile-header">
+            <div class="mobile-header-content">
+                <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+                <h2 class="mobile-title">TrustFin Admin</h2>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>TrustFin Admin</h2>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-section">Dashboard</div>
+                <a href="/" class="nav-item {{ 'active' if request.endpoint == 'index' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    Home
+                </a>
+
+                <div class="nav-section">Service Management</div>
+                <a href="/members" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('member') else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    회원 관리
+                </a>
+                <a href="/products" class="nav-item {{ 'active' if request.endpoint == 'products' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    상품 관리
+                </a>
+                <a href="/missions" class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('mission') else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                    미션 관리
+                </a>
+                <a href="/points" class="nav-item {{ 'active' if request.endpoint in ['points', 'point_detail', 'points_adjust'] else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                    포인트 관리
+                </a>
+                <a href="/point-products" class="nav-item {{ 'active' if request.endpoint and (request.endpoint.startswith('point_product') or request.endpoint == 'point_purchases') else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                    포인트 상품
+                </a>
+
+                <div class="nav-section">System & Config</div>
+                <a href="/system-info" class="nav-item {{ 'active' if request.endpoint == 'system_info' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    시스템 정보
+                </a>
+                <a href="/collection-management" class="nav-item {{ 'active' if request.endpoint == 'collection_management' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    수집 관리
+                </a>
+                <a href="/credit-weights" class="nav-item {{ 'active' if request.endpoint == 'credit_weights' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                    신용평가 설정
+                </a>
+                <a href="/recommend-settings" class="nav-item {{ 'active' if request.endpoint == 'recommend_settings' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    추천 설정
+                </a>
+
+                <div class="nav-section">Tools</div>
+                <a href="/simulator" class="nav-item {{ 'active' if request.endpoint == 'simulator' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                    시뮬레이터
+                </a>
+                <a href="/data/raw_loan_products" class="nav-item {{ 'active' if request.endpoint == 'view_data' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s 9-1.34 9-3V5"></path></svg>
+                    데이터 조회
+                </a>
+            </div>
+            <div class="sidebar-footer">
+                <button onclick="toggleDarkMode()" class="theme-toggle" title="다크모드 전환"><span id="theme-icon">🌙</span></button>
+                <a href="/logout" class="nav-item logout-link">
+                    <svg class="nav-icon logout-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-bar">
+                {% block header_actions %}{% endblock %}
+            </div>
+
+        {% if message %}
+            <div class="alert {{ status }}">{{ message }}</div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, msg in messages %}
+                    <div class="alert {{ 'success' if category == 'success' else 'error' if category == 'error' else 'warning' }}">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+        </main>
+    </div> <!-- End app-container -->
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebar-overlay').classList.toggle('active');
+            document.body.classList.toggle('sidebar-open');
+        }
+        function toggleDarkMode() {
+            var html = document.documentElement;
+            var isDark = html.classList.toggle('dark');
+            localStorage.setItem('adminTheme', isDark ? 'dark' : 'light');
+            document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+        }
+        (function() {
+            if (document.documentElement.classList.contains('dark')) {
+                var icon = document.getElementById('theme-icon');
+                if (icon) icon.textContent = '☀️';
+            }
+        })();
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('active');
+                document.getElementById('sidebar-overlay').classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+        });
+    </script>
+</body>
+</html>""",
+    'login.html': """<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"><title>Login - TrustFin Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}?v=16" type="text/css">
+    <script>
+        (function() {
+            var saved = localStorage.getItem('adminTheme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="login-container">
+        <h1>관리자 로그인</h1>
+        <p class="text-center text-sub text-sm mb-6 mt-neg-1">관리자 계정으로만 접근 가능합니다. 계정 정보가 없으면 시스템 담당자에게 문의하세요.</p>
+        <form method="post">
+            <input type="text" name="username" placeholder="관리자 아이디 입력 (예: admin)" required>
+            <input type="password" name="password" placeholder="비밀번호 입력" required>
+            <button type="submit">로그인</button>
+        </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}<div class="error">{{ messages[0] }}</div>{% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>""",
+    'index.html': """{% extends "base.html" %}
+
+{% block head_meta %}
+    {% if auto_refresh %}
+    <meta http-equiv="refresh" content="30; url={{ url_for('index') }}">
+    {% endif %}
+{% endblock %}
+
+{% block header_actions %}
+    <a href="/toggle_refresh" class="nav-btn {{ 'active' if auto_refresh else '' }}" title="{{ '자동 새로고침 ON: 30초마다 대시보드가 자동 업데이트됩니다. 클릭하면 OFF로 전환합니다.' if auto_refresh else '자동 새로고침 OFF: 클릭하면 30초 간격 자동 업데이트를 켭니다.' }}">
+        {{ 'Auto Refresh: ON' if auto_refresh else 'Auto Refresh: OFF' }}
+    </a>
+{% endblock %}
+
+{% block content %}
+        <!-- Educational Guide Card -->
+        <div class="card guide-card">
+            <div class="card-p">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="badge badge-info">교육용 가이드</span>
+                    <h3 class="font-bold text-sm">대시보드의 역할</h3>
+                </div>
+                <p class="text-sm text-sub">
+                    이 대시보드는 <strong>TrustFin</strong> 서비스의 두뇌 역할을 하는 관리자 페이지의 메인 화면입니다. 금융 데이터 수집 현황, 시스템 상태, 그리고 핵심적인 신용 평가 가중치를 한눈에 파악할 수 있도록 설계되었습니다. <br>특히 <strong>'현재 신용 평가 가중치'</strong> 섹션은 AI가 어떤 기준으로 사용자를 평가하고 있는지 투명하게 보여주며, 이는 XAI(설명 가능한 AI)의 핵심 원칙인 <strong>투명성</strong>을 관리자 관점에서 구현한 것입니다.
+                </p>
+            </div>
+        </div>
+
+        <!-- System Status Bar -->
+        <div class="system-status-bar">
+            <a href="/data/raw_loan_products" class="status-item" title="데이터베이스 연결 상태입니다. 클릭하면 데이터 조회 페이지로 이동합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.db else 'dot-danger' }}"></span>
+                <span class="status-label">DB Connection</span>
+                <span class="status-value">{{ 'Connected' if system_status.db else 'Disconnected' }}</span>
+            </a>
+            <a href="/collection-management" class="status-item" title="활성화된 데이터 수집기 수 / 전체 수집기 수. 클릭하면 수집 관리 페이지로 이동합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.collectors_active == system_status.collectors_total else 'dot-warning' if system_status.collectors_active > 0 else 'dot-danger' }}"></span>
+                <span class="status-label">Collectors</span>
+                <span class="status-value">{{ system_status.collectors_active }}/{{ system_status.collectors_total }} Active</span>
+            </a>
+            <a href="/system-info" class="status-item" title="서버 현재 시간. 클릭하면 시스템 정보 페이지로 이동합니다.">
+                <span class="status-dot dot-info"></span>
+                <span class="status-label">System Time</span>
+                <span class="status-value">{{ system_status.now }}</span>
+            </a>
+            <a href="/data/collection_logs?search_col=status&search_val=FAIL" class="status-item" title="최근 24시간 내 발생한 수집 실패 로그 건수입니다. 클릭하면 실패 로그를 조회합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.recent_errors == 0 else 'dot-danger' }}"></span>
+                <span class="status-label">Recent Errors (24h)</span>
+                <span class="status-value">{{ 'None' if system_status.recent_errors == 0 else system_status.recent_errors ~ ' Found' }}</span>
+            </a>
+            <div class="spacer"></div>
+            <div class="status-item">
+                <span class="status-label">Version</span>
+                <span class="status-value version-text">v0.1.0 (Proto)</span>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card" title="금감원 API에서 수집된 대출 상품의 총 건수입니다.">
+                <div class="summary-label">대출 상품 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.loan_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다.">
+                <div class="summary-label">경제 지표 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.economy_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다.">
+                <div class="summary-label">소득 통계 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.income_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다.">
+                <div class="summary-label">총 수집 로그</div>
+                <div class="summary-value">{{ "{:,}".format(stats.log_count | default(0)) }}</div>
+            </div>
+        </div>
+
+        <!-- 신용 평가 가중치 요약 -->
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3 class="card-title">현재 신용 평가 가중치</h3>
+                <a href="/credit-weights" class="nav-btn" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
+            </div>
+            <div class="card-p">
+                <p class="help-text mb-3">세 가중치의 합은 1.0이어야 합니다. 자세한 조정은 <strong>신용평가 설정</strong> 메뉴에서 할 수 있습니다.</p>
+                <div class="credit-weights-body">
+               <div class="weight-item">
+                   <div class="weight-label">소득 비중</div>
+                   <div class="weight-value text-primary" title="WEIGHT_INCOME: 유저의 연 소득이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_INCOME | default(0.5) }}</div>
+                </div>
+                <div class="weight-item middle">
+                    <div class="weight-label">고용 안정성</div>
+                    <div class="weight-value" style="color: #10b981;" title="WEIGHT_JOB_STABILITY: 고용 형태에 따른 안정성이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                </div>
+                <div class="weight-item">
+                    <div class="weight-label">자산 비중</div>
+                    <div class="weight-value" style="color: #f59e0b;" title="WEIGHT_ESTATE_ASSET: 보유 자산이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Card 1: Loan -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">금감원 대출상품</h3>
+                        <span class="last-run">최근 실행: {{ loan_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="loan" class="refresh-btn" title="금감원 대출상품 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=loan_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+
+            <!-- Card 2: Economy -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">경제 지표</h3>
+                        <span class="last-run">최근 실행: {{ economy_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="economy" class="refresh-btn" title="경제 지표 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=economy_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+
+            <!-- Card 3: Income -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">통계청 소득정보</h3>
+                        <span class="last-run">최근 실행: {{ income_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="income" class="refresh-btn" title="통계청 소득정보를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=income_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+        </div>
+{% endblock %}""",
+    'components/log_table.html': """<div class="log-table-container">
+    <table class="w-full">
+        <thead><tr>
+            <th class="th-w-30 text-left nowrap">실행 시간</th>
+            <th class="th-w-15 text-center nowrap">상태</th>
+            <th class="th-w-15 text-right nowrap">건수</th>
+            <th class="th-w-40 text-left nowrap">메시지</th>
+        </tr></thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="text-sub text-left">{{ log.executed_at.strftime('%Y-%m-%d %H:%M:%S') if log.executed_at else '-' }}</td>
+                <td class="text-center">
+                    <span class="badge {{ 'badge-danger' if log.status == 'FAIL' else 'badge-success' if log.status == 'SUCCESS' else 'badge-neutral' }}">{{ log.status }}</span>
+                </td>
+                <td class="text-right font-bold text-primary nowrap">{{ "{:,}".format(log.row_count) }}</td>
+                <td class="text-left" title="{{ log.error_message if log.error_message else '' }}">
+                    <div class="text-sub text-sm text-truncate">{{ log.error_message if log.error_message else '-' }}</div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted p-4">수집된 로그가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>""",
+    'collection_management.html': """{% extends "base.html" %}
+{% block content %}
+<h1>금융 데이터 수집 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">설계 의도</span>
+            <h3 class="font-bold text-sm">데이터 수집의 투명성</h3>
+        </div>
+        <p class="text-sm text-sub">
+            신뢰할 수 있는 AI는 신뢰할 수 있는 데이터에서 시작됩니다. 이 페이지에서는 <strong>금융감독원(대출상품), 통계청(소득/경제지표)</strong> 등 공신력 있는 외부 기관의 데이터를 수집하는 파이프라인을 관리합니다. <br>각 데이터 소스별로 수집 상태를 모니터링하고 제어함으로써, AI 모델이 학습하고 추론하는 데이터의 <strong>최신성과 무결성</strong>을 보장합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 수동으로 즉시 수집할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 수동 수집 버튼도 비활성화됩니다.</div>
+
+<div class="dashboard-grid">
+    {% for src in sources %}
+    <div class="card card-p">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="card-title">{{ src.label }}</h3>
+            <span class="{{ 'badge-on' if src.enabled else 'badge-off' }}" title="{{ '수집 활성화 상태' if src.enabled else '수집 비활성화 상태' }}">
+                {{ 'ON' if src.enabled else 'OFF' }}
+            </span>
+        </div>
+        <div class="text-sm text-sub mb-4">
+            <div>최근 실행: {{ src.last_run }}</div>
+            <div>최근 상태: <span class="font-bold {{ 'text-success' if src.last_status == 'SUCCESS' else 'text-danger' if src.last_status == 'FAIL' else 'text-sub' }}">{{ src.last_status or '-' }}</span></div>
+            <div>수집 건수: {{ src.last_count }}</div>
+        </div>
+        <div class="flex gap-2">
+            <form action="/toggle_collector" method="post" class="flex-1">
+                <input type="hidden" name="source" value="{{ src.key }}">
+                <button type="submit" title="{{ '수집을 비활성화합니다.' if src.enabled else '수집을 활성화합니다.' }}" class="{{ 'btn-outline-danger' if src.enabled else 'btn-outline-success' }} w-full p-2">
+                    {{ '비활성화' if src.enabled else '활성화' }}
+                </button>
+            </form>
+            <form action="/trigger" method="post" class="flex-1">
+                <button type="submit" name="job" value="{{ src.trigger_val }}" title="지금 즉시 이 소스의 데이터를 수집합니다." class="refresh-btn w-full p-2"
+                    {{ 'disabled' if not src.enabled else '' }}>수동 수집</button>
+            </form>
+        </div>
+        {% if not src.enabled %}
+        <p class="help-text text-danger mt-2">수집이 비활성화되어 있습니다. 수동 수집을 실행하려면 먼저 활성화하세요.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}""",
+    'credit_weights.html': """{% extends "base.html" %}
+{% block content %}
+<h1>신용평가 가중치 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">XAI 핵심 기능</span>
+            <h3 class="font-bold text-sm">설명 가능한 신용 평가 모델링</h3>
+        </div>
+        <p class="text-sm text-sub">
+            기존 금융권의 신용 평가는 '블랙박스'처럼 내부 로직을 알기 어려웠습니다. TrustFin은 관리자가 <strong>소득, 고용 안정성, 자산</strong> 등 핵심 변수의 가중치를 직접 조정하고, 그 결과가 어떻게 반영되는지 시뮬레이션할 수 있게 합니다. <br>이 설정값은 사용자에게 제공되는 <strong>'AI 분석 리포트'</strong>의 근거가 되며, 사용자가 자신의 평가 결과를 납득하고 개선할 수 있도록 돕는 <strong>설명 가능성(Explainability)</strong>의 기반이 됩니다.
+        </p>
+    </div>
+</div>
+
+<p class="text-sub mb-6">신용 평가 로직의 구성 요소를 수치화하여 조절합니다. 변경 사항은 대출 추천 결과에 즉시 반영됩니다.</p>
+
+<form method="post">
+    <!-- 섹션 1: 핵심 가중치 -->
+    <div class="card card-p mb-6">
+        <h3 class="card-title text-primary mt-0">핵심 가중치 (합계 = 1.0)</h3>
+        <div class="grid-3 mb-4">
+            <div>
+                <label class="form-label text-primary">소득 비중 (WEIGHT_INCOME)</label>
+                <input type="range" min="0" max="1" step="0.01" name="income_weight" value="{{ income_weight }}" id="rng_income" oninput="syncWeight()" class="w-full">
+                <input type="number" step="0.01" min="0" max="1" id="num_income" value="{{ income_weight }}" onchange="syncFromNum('income')" class="form-input mt-2">
+                <p class="help-text">0.0~1.0 범위. 값이 클수록 연 소득이 신용 점수에 더 큰 영향을 미칩니다.</p>
+            </div>
+            <div>
+                <label class="form-label text-green-500">고용 안정성 (WEIGHT_JOB_STABILITY)</label>
+                <input type="range" min="0" max="1" step="0.01" name="job_weight" value="{{ job_weight }}" id="rng_job" oninput="syncWeight()" class="w-full">
+                <input type="number" step="0.01" min="0" max="1" id="num_job" value="{{ job_weight }}" onchange="syncFromNum('job')" class="form-input mt-2">
+                <p class="help-text">0.0~1.0 범위. 고용 형태(대기업·공무원→1.0, 무직→0.2)와 곱해집니다.</p>
+            </div>
+            <div>
+                <label class="form-label text-orange-500">자산 비중 (WEIGHT_ESTATE_ASSET)</label>
+                <input type="range" min="0" max="1" step="0.01" name="asset_weight" value="{{ asset_weight }}" id="rng_asset" oninput="syncWeight()" class="w-full">
+                <input type="number" step="0.01" min="0" max="1" id="num_asset" value="{{ asset_weight }}" onchange="syncFromNum('asset')" class="form-input mt-2">
+                <p class="help-text">0.0~1.0 범위. 보유 자산 금액을 정규화한 점수에 곱해집니다.</p>
+            </div>
+        </div>
+        <!-- 합계 표시 + 비율 바 -->
+        <div class="mb-2 text-lg font-bold" title="세 가중치의 합은 반드시 1.0이어야 합니다.">합계: <span id="weightSum" class="{{ 'text-success' if (income_weight + job_weight + asset_weight) | round(2) == 1.0 else 'text-danger' }}">{{ (income_weight + job_weight + asset_weight) | round(2) }}</span></div>
+        <div style="display: flex; height: 24px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+            <div id="bar_income" style="background: var(--primary); transition: width 0.2s; width: {{ income_weight * 100 }}%;"></div>
+            <div id="bar_job" style="background: #10b981; transition: width 0.2s; width: {{ job_weight * 100 }}%;"></div>
+            <div id="bar_asset" style="background: #f59e0b; transition: width 0.2s; width: {{ asset_weight * 100 }}%;"></div>
+        </div>
+    </div>
+
+    <!-- 섹션 2: 정규화 기준 -->
+    <div class="card card-p mb-6">
+        <h3 class="card-title text-primary mt-0">정규화 기준 (Normalization Ceiling)</h3>
+        <p class="help-text mb-4">입력한 금액을 100%로 보고 비율로 0.0~1.0 점수를 매깁니다. 예: 소득 기준이 1억원이면 소득 5천만원인 유저는 점수 0.5를 받습니다.</p>
+        <div class="grid-2">
+            <div>
+                <label class="form-label">소득 만점 기준 (원)</label>
+                <input type="number" name="norm_income_ceiling" value="{{ norm_income_ceiling | int }}" step="10000000" placeholder="예: 100000000 (1억원)" class="form-input">
+                <span class="text-sm text-sub">현재: {{ "{:,.0f}".format(norm_income_ceiling) }}원</span>
+                <p class="help-text">이 금액 이상의 연 소득은 소득 점수 1.0(만점)을 받습니다. 기본값: 1억원.</p>
+            </div>
+            <div>
+                <label class="form-label">자산 만점 기준 (원)</label>
+                <input type="number" name="norm_asset_ceiling" value="{{ norm_asset_ceiling | int }}" step="10000000" placeholder="예: 500000000 (5억원)" class="form-input">
+                <span class="text-sm text-sub">현재: {{ "{:,.0f}".format(norm_asset_ceiling) }}원</span>
+                <p class="help-text">이 금액 이상의 보유 자산은 자산 점수 1.0(만점)을 받습니다. 기본값: 5억원.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 섹션 3: XAI 설명 임계값 -->
+    <div class="card card-p mb-6">
+        <h3 class="card-title mt-0" style="color: var(--accent);">XAI 설명 임계값 (Explanation Thresholds)</h3>
+        <p class="help-text mb-4">XAI 설명 텍스트에 표시될 최소 기여도 임계값입니다. 예: 소득 임계값이 0.15이면 소득 기여도가 15% 이상인 경우에만 설명이 표시됩니다. 값이 낮을수록 더 많은 항목이 표시됩니다.</p>
+        <div class="grid-3">
+            <div>
+                <label class="form-label">소득 기여도 임계값</label>
+                <input type="number" step="0.01" name="xai_threshold_income" value="{{ xai_threshold_income }}" class="form-input">
+                <p class="help-text">권장 범위: 0.05~0.30. 기본값 0.15.</p>
+            </div>
+            <div>
+                <label class="form-label">고용 기여도 임계값</label>
+                <input type="number" step="0.01" name="xai_threshold_job" value="{{ xai_threshold_job }}" class="form-input">
+                <p class="help-text">권장 범위: 0.05~0.25. 기본값 0.10.</p>
+            </div>
+            <div>
+                <label class="form-label">자산 기여도 임계값</label>
+                <input type="number" step="0.01" name="xai_threshold_asset" value="{{ xai_threshold_asset }}" class="form-input">
+                <p class="help-text">권장 범위: 0.02~0.20. 기본값 0.05.</p>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" title="변경 사항을 즉시 DB에 저장합니다." class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">설정 저장</button>
+</form>
+
+<script>
+function syncWeight() {
+    var i = parseFloat(document.getElementById('rng_income').value);
+    var j = parseFloat(document.getElementById('rng_job').value);
+    var a = parseFloat(document.getElementById('rng_asset').value);
+    document.getElementById('num_income').value = i.toFixed(2);
+    document.getElementById('num_job').value = j.toFixed(2);
+    document.getElementById('num_asset').value = a.toFixed(2);
+    var sum = (i + j + a).toFixed(2);
+    var el = document.getElementById('weightSum');
+    el.textContent = sum;
+    el.style.color = Math.abs(parseFloat(sum) - 1.0) < 0.015 ? 'var(--success-fg)' : 'var(--danger-fg)';
+    document.getElementById('bar_income').style.width = (i * 100) + '%';
+    document.getElementById('bar_job').style.width = (j * 100) + '%';
+    document.getElementById('bar_asset').style.width = (a * 100) + '%';
+}
+function syncFromNum(which) {
+    var val = parseFloat(document.getElementById('num_' + which).value);
+    document.getElementById('rng_' + which).value = val;
+    syncWeight();
+}
+</script>
+{% endblock %}""",
+    'recommend_settings.html': """{% extends "base.html" %}
+{% block content %}
+<h1>대출 추천 알고리즘 설정</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">서비스 전략</span>
+            <h3 class="font-bold text-sm">추천 알고리즘의 유연성</h3>
+        </div>
+        <p class="text-sm text-sub">
+            단순히 금리가 낮은 상품만 추천하는 것이 정답은 아닙니다. 사용자의 상황(한도가 중요한지, 금리가 중요한지)에 따라 추천 전략을 유연하게 변경할 수 있어야 합니다. <br>이 페이지에서는 <strong>정렬 우선순위</strong>와 <strong>금리 민감도</strong> 등을 조정하여, AI가 어떤 기준으로 상품을 추천할지 서비스의 방향성을 결정합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">이 설정은 사용자에게 노출되는 대출 추천 목록의 정렬 방식, 표시 개수, 조건 미달 시 처리 방법을 제어합니다. 변경 사항은 저장 즉시 추천 API에 적용됩니다.</div>
+
+<form method="post">
+    <div class="card card-p mb-6">
+        <h3 class="card-title text-primary mt-0">추천 파라미터</h3>
+        <div class="grid-2">
+            <div>
+                <label class="form-label">최대 추천 수</label>
+                <input type="number" name="max_count" value="{{ max_count }}" min="1" max="20" class="form-input">
+                <p class="help-text">사용자에게 보여줄 최대 추천 상품 수입니다. 권장: 3~7개.</p>
+            </div>
+            <div>
+                <label class="form-label">정렬 우선순위</label>
+                <select name="sort_priority" class="form-select">
+                    <option value="rate" {% if sort_priority == 'rate' %}selected{% endif %}>예상 금리 낮은 순 (rate)</option>
+                    <option value="limit" {% if sort_priority == 'limit' %}selected{% endif %}>대출 한도 높은 순 (limit)</option>
+                </select>
+                <p class="help-text">"금리 낮은 순"은 이자 부담 최소화, "한도 높은 순"은 대출 가능 금액 최대화 방향입니다.</p>
+            </div>
+            <div>
+                <label class="form-label">Fallback 모드</label>
+                <select name="fallback_mode" class="form-select">
+                    <option value="show_all" {% if fallback_mode == 'show_all' %}selected{% endif %}>전체 상품 표시 (show_all)</option>
+                    <option value="show_none" {% if fallback_mode == 'show_none' %}selected{% endif %}>빈 결과 반환 (show_none)</option>
+                </select>
+                <p class="help-text">희망 대출 금액을 지원하는 상품이 없을 때의 처리 방식입니다.</p>
+            </div>
+            <div>
+                <label class="form-label">금리 스프레드 민감도</label>
+                <input type="number" step="0.1" name="rate_sensitivity" value="{{ rate_sensitivity }}" min="0.1" max="3.0" class="form-input">
+                <p class="help-text">1.0이 기본값입니다. 높을수록 신용 점수 차이에 따른 금리 차이가 커집니다.</p>
+            </div>
+        </div>
+    </div>
+    <button type="submit" title="변경 사항을 저장합니다." class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">설정 저장</button>
+</form>
+{% endblock %}""",
+    'products.html': """{% extends "base.html" %}
+{% block content %}
+<h1>대출 상품 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">운영 관리</span>
+            <h3 class="font-bold text-sm">상품 노출 제어</h3>
+        </div>
+        <p class="text-sm text-sub">
+            수집된 금융 상품 중 일시적으로 판매가 중단되거나 정책상 노출을 제한해야 하는 경우가 발생합니다. 관리자가 직접 상품의 노출 여부를 제어함으로써, 사용자에게 <strong>유효하고 정확한 정보</strong>만 제공되도록 관리합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">수집된 대출 상품의 사용자 노출 여부를 관리합니다. 비노출 처리된 상품은 추천 결과에서 제외됩니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card" title="수집된 대출 상품의 전체 건수입니다.">
+        <div class="summary-label">전체 상품</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card" title="현재 사용자에게 노출 중인 상품 수입니다.">
+        <div class="summary-label">노출 중</div>
+        <div class="summary-value text-success">{{ visible_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">비노출</div>
+        <div class="summary-value text-danger">{{ hidden_count }}</div>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>은행</th>
+            <th>상품명</th>
+            <th class="text-right">최저 금리</th>
+            <th class="text-right">최고 금리</th>
+            <th class="text-right">대출 한도</th>
+            <th class="text-center">상태</th>
+            <th class="text-center">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td>{{ p.bank_name }}</td>
+                <td class="font-bold">{{ p.product_name }}</td>
+                <td class="text-right">{{ p.loan_rate_min }}%</td>
+                <td class="text-right">{{ p.loan_rate_max }}%</td>
+                <td class="text-right">{{ "{:,.0f}".format(p.loan_limit) }}원</td>
+                <td class="text-center">
+                    {% if p.is_visible == 1 %}
+                        <span class="badge badge-success">노출</span>
+                    {% else %}
+                        <span class="badge badge-danger">비노출</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <form action="/products/toggle_visibility" method="post" class="form-inline">
+                        <input type="hidden" name="bank_name" value="{{ p.bank_name }}">
+                        <input type="hidden" name="product_name" value="{{ p.product_name }}">
+                        <button type="submit" class="{{ 'btn-outline-danger' if p.is_visible == 1 else 'btn-outline-success' }}">
+                            {{ '비노출 처리' if p.is_visible == 1 else '노출 처리' }}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">등록된 상품이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'missions.html': """{% extends "base.html" %}
+{% block content %}
+<h1>미션 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">행동 경제학 적용</span>
+            <h3 class="font-bold text-sm">금융 행동 변화 유도 (Nudge)</h3>
+        </div>
+        <p class="text-sm text-sub">
+            TrustFin은 단순히 대출을 추천하는 것을 넘어, 사용자가 <strong>더 나은 금융 조건</strong>을 갖추도록 돕습니다. AI가 분석한 사용자의 취약점(예: 낮은 신용점수, 부족한 자산)을 보완할 수 있는 구체적인 행동을 <strong>'미션'</strong> 형태로 제안합니다. <br>이 페이지에서는 생성된 미션들의 현황을 모니터링하여, 사용자들이 실제로 금융 행동을 변화시키고 있는지 파악합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">AI가 유저의 대출 목적과 재무 상황을 바탕으로 자동 생성한 미션 목록입니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">전체 미션</div>
+        <div class="summary-value">{{ total }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">대기(pending)</div>
+        <div class="summary-value text-sub">{{ pending }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">진행(in_progress)</div>
+        <div class="summary-value text-primary">{{ in_progress }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">완료(completed)</div>
+        <div class="summary-value text-success">{{ completed }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">완료율</div>
+        <div class="summary-value text-primary">{{ "%.1f" | format(completion_rate) }}%</div>
+    </div>
+</div>
+
+<div class="card card-p mb-6">
+    <h3 class="card-title text-primary text-sm mt-0">유형별 분포</h3>
+    {% for type_name, count in type_counts.items() %}
+    <div class="flex items-center mb-2 gap-2">
+        <span style="width: 90px; font-size: 0.85rem; font-weight: 600;">{{ type_name }}</span>
+        <div style="flex: 1; background: var(--border-light); border-radius: 8px; height: 20px;">
+            <div style="background: var(--primary); height: 100%; border-radius: var(--radius-btn); width: {{ (count / total * 100) if total > 0 else 0 }}%; min-width: 2px;"></div>
+        </div>
+        <span style="width: 30px; text-align: right; font-size: 0.85rem;">{{ count }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<form method="get" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
+    <span class="font-semibold text-sub">필터:</span>
+    <select name="status_filter" class="form-select w-auto">
+        <option value="">전체 상태</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>대기 (pending)</option>
+        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>진행 (in_progress)</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>완료 (completed)</option>
+        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료 (expired)</option>
+    </select>
+    <select name="type_filter" class="form-select w-auto">
+        <option value="">전체 유형</option>
+        <option value="savings" {% if type_filter == 'savings' %}selected{% endif %}>savings (저축)</option>
+        <option value="spending" {% if type_filter == 'spending' %}selected{% endif %}>spending (지출 절감)</option>
+        <option value="credit" {% if type_filter == 'credit' %}selected{% endif %}>credit (신용 관리)</option>
+        <option value="investment" {% if type_filter == 'investment' %}selected{% endif %}>investment (투자)</option>
+        <option value="lifestyle" {% if type_filter == 'lifestyle' %}selected{% endif %}>lifestyle (생활 습관)</option>
+    </select>
+    <button type="submit" class="btn-accent" style="padding: 8px 16px;">적용</button>
+    {% if status_filter or type_filter %}
+        <a href="/missions" class="nav-btn">초기화</a>
+    {% endif %}
+</form>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>ID</th>
+            <th>유저</th>
+            <th>미션 제목</th>
+            <th>유형</th>
+            <th>대출 목적</th>
+            <th>상태</th>
+            <th>난이도</th>
+            <th>포인트</th>
+            <th>마감일</th>
+        </tr></thead>
+        <tbody>
+            {% for m in missions %}
+            <tr>
+                <td>{{ m.mission_id }}</td>
+                <td>{{ m.user_id }}</td>
+                <td class="font-bold">
+                    <a href="/missions/{{ m.mission_id }}" class="text-primary" style="text-decoration: none;">{{ m.mission_title }}</a>
+                </td>
+                <td><span class="badge badge-info">{{ m.mission_type }}</span></td>
+                <td>{{ m.loan_purpose or '-' }}</td>
+                <td>
+                    {% if m.status == 'completed' %}
+                        <span class="badge badge-success">completed</span>
+                    {% elif m.status == 'in_progress' %}
+                        <span class="badge badge-info">in_progress</span>
+                    {% elif m.status == 'expired' %}
+                        <span class="badge badge-danger">expired</span>
+                    {% else %}
+                        <span class="badge badge-warning">pending</span>
+                    {% endif %}
+                </td>
+                <td>{{ m.difficulty }}</td>
+                <td>{{ m.reward_points }}</td>
+                <td>{{ m.due_date or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="text-center text-sub p-4">미션이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'mission_detail.html': """{% extends "base.html" %}
+{% block content %}
+<h1>미션 상세</h1>
+<a href="/missions" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">미션 상세 정보입니다. 이 페이지는 읽기 전용이며, 미션 상태는 시스템에 의해 자동으로 관리됩니다.</div>
+
+<div class="card card-p">
+    <table class="w-full">
+        <tr><td class="font-bold text-sub w-150">Mission ID</td><td>{{ mission.mission_id }}</td></tr>
+        <tr><td class="font-bold text-sub">유저 ID</td><td>{{ mission.user_id }}</td></tr>
+        <tr><td class="font-bold text-sub">미션 제목</td><td class="font-bold">{{ mission.mission_title }}</td></tr>
+        <tr><td class="font-bold text-sub">미션 설명</td><td>{{ mission.mission_description or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">유형</td><td>{{ mission.mission_type }}</td></tr>
+        <tr><td class="font-bold text-sub">대출 목적</td><td>{{ mission.loan_purpose or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">상태</td><td>{{ mission.status }}</td></tr>
+        <tr><td class="font-bold text-sub">난이도</td><td>{{ mission.difficulty }}</td></tr>
+        <tr><td class="font-bold text-sub">보상 포인트</td><td>{{ mission.reward_points }}</td></tr>
+        <tr><td class="font-bold text-sub">마감일</td><td>{{ mission.due_date or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">완료일</td><td>{{ mission.completed_at or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">생성일</td><td>{{ mission.created_at }}</td></tr>
+    </table>
+</div>
+{% endblock %}""",
+    'points.html': """{% extends "base.html" %}
+{% block content %}
+<h1>포인트 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">게이미피케이션</span>
+            <h3 class="font-bold text-sm">보상 시스템과 동기 부여</h3>
+        </div>
+        <p class="text-sm text-sub">
+            금융 활동은 지루하고 어렵게 느껴질 수 있습니다. 이를 극복하기 위해 <strong>포인트 보상 시스템</strong>을 도입했습니다. 미션 달성에 대한 즉각적인 보상(포인트)을 제공함으로써, 사용자가 지속적으로 금융 상태를 관리하고 개선하도록 <strong>동기를 부여</strong>합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">유저별 포인트 잔액, 지급/사용 현황을 모니터링합니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">총 유저 수</div>
+        <div class="summary-value">{{ user_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 유통 포인트</div>
+        <div class="summary-value">{{ "{:,}".format(total_balance) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 지급 포인트</div>
+        <div class="summary-value text-success">{{ "{:,}".format(total_earned) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용 포인트</div>
+        <div class="summary-value text-danger">{{ "{:,}".format(total_spent) }}</div>
+    </div>
+</div>
+
+<div class="card card-p mb-6">
+    <h3 class="card-title text-primary mt-0">수동 포인트 조정</h3>
+    <div class="warn-banner">수동 포인트 조정은 즉시 반영되며 취소할 수 없습니다.</div>
+    <form method="post" action="/points/adjust" class="flex gap-2 items-end flex-wrap">
+        <div class="flex-1 min-w-150">
+            <label class="form-label text-sm">유저 ID</label>
+            <input type="text" name="user_id" placeholder="예: user_001" required class="form-input">
+        </div>
+        <div class="flex-1 min-w-120">
+            <label class="form-label text-sm">금액 (양수=지급, 음수=차감)</label>
+            <input type="number" name="amount" placeholder="예: 100 또는 -50" required class="form-input">
+        </div>
+        <div class="flex-2 min-w-200">
+            <label class="form-label text-sm">사유</label>
+            <input type="text" name="reason" placeholder="예: 이벤트 보상, 오류 정정" required class="form-input">
+        </div>
+        <button type="submit" class="btn-accent" style="padding: 10px 20px; white-space: nowrap;">포인트 조정</button>
+    </form>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>유저 ID</th>
+            <th class="text-right">잔액</th>
+            <th class="text-right">총 지급</th>
+            <th class="text-right">총 사용</th>
+            <th>최근 업데이트</th>
+            <th class="text-center">상세</th>
+        </tr></thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="font-bold">{{ u.user_id }}</td>
+                <td class="text-right font-bold text-primary">{{ "{:,}".format(u.balance) }}</td>
+                <td class="text-right text-success">{{ "{:,}".format(u.total_earned) }}</td>
+                <td class="text-right text-danger">{{ "{:,}".format(u.total_spent) }}</td>
+                <td>{{ u.updated_at if u.updated_at else '-' }}</td>
+                <td class="text-center">
+                    <a href="/points/{{ u.user_id }}" class="text-primary font-bold" style="text-decoration: none;">거래 내역</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-sub p-4">포인트 데이터가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'point_detail.html': """{% extends "base.html" %}
+{% block content %}
+<h1>포인트 상세 - {{ user_id }}</h1>
+<a href="/points" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">현재 잔액</div>
+        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 지급</div>
+        <div class="summary-value text-success">{{ "{:,}".format(user.total_earned) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용</div>
+        <div class="summary-value text-danger">{{ "{:,}".format(user.total_spent) }}</div>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <h3 class="card-title text-primary text-sm mb-3">거래 내역</h3>
+    <table class="w-full">
+        <thead><tr>
+            <th>ID</th>
+            <th class="text-right">금액</th>
+            <th>유형</th>
+            <th>사유</th>
+            <th>관리자</th>
+            <th>참조 ID</th>
+            <th>일시</th>
+        </tr></thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.transaction_id }}</td>
+                <td class="text-right font-bold {{ 'text-success' if t.amount > 0 else 'text-danger' }}">{{ '{:+,}'.format(t.amount) }}</td>
+                <td>
+                    {% if t.transaction_type == 'mission_reward' %}
+                        <span class="badge badge-success">mission_reward</span>
+                    {% elif t.transaction_type == 'purchase' %}
+                        <span class="badge badge-danger">purchase</span>
+                    {% elif t.transaction_type == 'manual' %}
+                        <span class="badge badge-info">manual</span>
+                    {% else %}
+                        <span class="badge badge-neutral">{{ t.transaction_type }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.reason or '-' }}</td>
+                <td>{{ t.admin_id or '-' }}</td>
+                <td>{{ t.reference_id or '-' }}</td>
+                <td>{{ t.created_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">거래 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'point_products.html': """{% extends "base.html" %}
+{% block content %}
+<h1>포인트 상품 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">순환 구조</span>
+            <h3 class="font-bold text-sm">포인트의 실질적 가치</h3>
+        </div>
+        <p class="text-sm text-sub">
+            획득한 포인트가 단순한 숫자에 그치지 않고, 실제 생활에 유용한 혜택(쿠폰, 금리 할인권 등)으로 교환될 수 있어야 합니다. 이러한 <strong>선순환 구조</strong>는 사용자가 TrustFin 생태계에 머무르게 하는 핵심 요인이 됩니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">포인트로 교환 가능한 상품을 등록하고 관리합니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">전체 상품</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">활성 상품</div>
+        <div class="summary-value text-success">{{ active_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">비활성 상품</div>
+        <div class="summary-value text-danger">{{ inactive_count }}</div>
+    </div>
+</div>
+
+<div class="flex gap-2 mb-6">
+    <a href="/point-products/add" class="btn-accent" style="padding: 10px 20px; text-decoration: none;">상품 추가</a>
+    <a href="/point-products/purchases" class="nav-btn" style="padding: 10px 20px; font-size: 1rem;">구매 내역 조회</a>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>ID</th>
+            <th>상품명</th>
+            <th>유형</th>
+            <th class="text-right">포인트 가격</th>
+            <th class="text-right">재고</th>
+            <th class="text-center">상태</th>
+            <th class="text-center">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td>{{ p.product_id }}</td>
+                <td class="font-bold">{{ p.product_name }}</td>
+                <td><span class="badge badge-info">{{ p.product_type }}</span></td>
+                <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
+                <td class="text-right {{ 'text-danger font-bold' if p.stock_quantity <= 5 else '' }}">{{ p.stock_quantity }}{{ ' (부족)' if p.stock_quantity <= 5 else '' }}</td>
+                <td class="text-center">
+                    {% if p.is_active == 1 %}
+                        <span class="badge-on">활성</span>
+                    {% else %}
+                        <span class="badge-off">비활성</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <div class="flex gap-2 justify-center">
+                        <a href="/point-products/{{ p.product_id }}/edit" class="nav-btn" style="padding: 4px 12px; font-size: 0.8rem;">수정</a>
+                        <form action="/point-products/{{ p.product_id }}/toggle" method="post" class="form-inline">
+                            <button type="submit" class="{{ 'btn-outline-danger' if p.is_active == 1 else 'btn-outline-success' }}">
+                                {{ '비활성' if p.is_active == 1 else '활성' }}
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">등록된 상품이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'point_product_form.html': """{% extends "base.html" %}
+{% block content %}
+<h1>{{ '상품 수정' if product else '상품 추가' }}</h1>
+<a href="/point-products" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">{{ '기존 상품 정보를 수정합니다.' if product else '새로운 포인트 상품을 등록합니다.' }}</div>
+
+<div class="card card-p max-w-600">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">상품명</label>
+            <input type="text" name="product_name" value="{{ product.product_name if product else '' }}" required placeholder="예: 스타벅스 아메리카노 쿠폰" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">상품 유형</label>
+            <select name="product_type" class="form-select">
+                <option value="coupon" {% if product and product.product_type == 'coupon' %}selected{% endif %}>coupon (쿠폰)</option>
+                <option value="gift_card" {% if product and product.product_type == 'gift_card' %}selected{% endif %}>gift_card (상품권)</option>
+                <option value="discount" {% if product and product.product_type == 'discount' %}selected{% endif %}>discount (할인)</option>
+                <option value="merchandise" {% if product and product.product_type == 'merchandise' %}selected{% endif %}>merchandise (상품)</option>
+                <option value="experience" {% if product and product.product_type == 'experience' %}selected{% endif %}>experience (이용권)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">설명</label>
+            <textarea name="description" rows="3" placeholder="상품 설명" class="form-textarea">{{ product.description if product else '' }}</textarea>
+        </div>
+        <div class="grid-2 mb-6">
+            <div>
+                <label class="form-label">포인트 가격</label>
+                <input type="number" name="point_cost" value="{{ product.point_cost if product else '' }}" min="1" required placeholder="예: 1000" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">재고 수량</label>
+                <input type="number" name="stock_quantity" value="{{ product.stock_quantity if product else '' }}" min="0" required placeholder="예: 100" class="form-input">
+            </div>
+        </div>
+        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+    </form>
+</div>
+{% endblock %}""",
+    'point_purchases.html': """{% extends "base.html" %}
+{% block content %}
+<h1>포인트 구매 내역</h1>
+<a href="/point-products" class="nav-btn mb-4">상품 목록으로 돌아가기</a>
+<div class="info-banner">유저들의 포인트 상품 구매 내역을 조회합니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">총 구매 건수</div>
+        <div class="summary-value">{{ total_purchases }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용 포인트</div>
+        <div class="summary-value text-danger">{{ "{:,}".format(total_points_used) }}P</div>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>구매 ID</th>
+            <th>유저 ID</th>
+            <th>상품명</th>
+            <th class="text-right">사용 포인트</th>
+            <th class="text-center">상태</th>
+            <th>구매일</th>
+        </tr></thead>
+        <tbody>
+            {% for p in purchases %}
+            <tr>
+                <td>{{ p.purchase_id }}</td>
+                <td class="font-bold">{{ p.user_id }}</td>
+                <td>{{ p.product_name or '(삭제된 상품)' }}</td>
+                <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
+                <td class="text-center">
+                    {% if p.status == 'completed' %}
+                        <span class="badge badge-success">completed</span>
+                    {% elif p.status == 'cancelled' %}
+                        <span class="badge badge-neutral">cancelled</span>
+                    {% else %}
+                        <span class="badge badge-warning">{{ p.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.purchased_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-sub p-4">구매 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'members.html': """{% extends "base.html" %}
+{% block content %}
+<h1>회원 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">사용자 관리</span>
+            <h3 class="font-bold text-sm">통합적인 사용자 뷰</h3>
+        </div>
+        <p class="text-sm text-sub">
+            사용자의 기본 정보뿐만 아니라, 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리합니다. 이는 개별 사용자에 대한 깊이 있는 이해를 돕고, 향후 <strong>개인화된 서비스</strong>를 제공하기 위한 기초 데이터가 됩니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">등록된 회원을 조회, 검색, 추가, 수정, 상태 변경할 수 있습니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">전체 회원</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">활성 회원</div>
+        <div class="summary-value text-success">{{ active_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">정지 회원</div>
+        <div class="summary-value text-danger">{{ suspended_count }}</div>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+    <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
+        <input type="text" name="search_name" value="{{ search_name }}" placeholder="회원 이름으로 검색..." class="form-input w-auto min-w-150">
+        <select name="search_status" class="form-select w-auto">
+            <option value="">전체 상태</option>
+            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
+            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
+            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
+        </select>
+        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        {% if search_name or search_status %}
+        <a href="/members" class="nav-btn">초기화</a>
+        {% endif %}
+    </form>
+    <a href="/members/add" class="btn-accent" style="padding: 10px 20px; text-decoration: none;">회원 추가</a>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>회원 ID</th>
+            <th>이름</th>
+            <th>이메일</th>
+            <th>전화번호</th>
+            <th class="text-center">상태</th>
+            <th>가입일</th>
+            <th class="text-center">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for u in members %}
+            <tr>
+                <td style="font-family: monospace;">{{ u.user_id }}</td>
+                <td class="font-bold">{{ u.user_name }}</td>
+                <td>{{ u.email or '-' }}</td>
+                <td>{{ u.phone or '-' }}</td>
+                <td class="text-center">
+                    {% if u.status == 'active' %}
+                        <span class="badge badge-success">활성</span>
+                    {% elif u.status == 'suspended' %}
+                        <span class="badge badge-danger">정지</span>
+                    {% else %}
+                        <span class="badge badge-neutral">탈퇴</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.join_date or '-' }}</td>
+                <td class="text-center">
+                    <a href="/members/{{ u.user_id }}" class="nav-btn" style="padding: 4px 12px; font-size: 0.8rem;">상세</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">등록된 회원이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}""",
+    'member_detail.html': """{% extends "base.html" %}
+{% block content %}
+<h1>회원 상세 정보</h1>
+<a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">회원의 기본 정보, 포인트 현황, 미션 현황, 포인트 구매 내역을 통합 조회합니다.</div>
+
+<div class="grid-2-1 mb-6">
+    <div class="card card-p">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="card-title text-primary mt-0">기본 정보</h3>
+            <a href="/members/{{ user.user_id }}/edit" class="nav-btn" style="padding: 6px 16px; font-size: 0.85rem;">수정</a>
+        </div>
+        <table class="w-full">
+            <tr><td class="font-bold text-sub w-120">회원 ID</td><td style="font-family: monospace;">{{ user.user_id }}</td></tr>
+            <tr class="bg-soft"><td class="font-bold text-sub">이름</td><td>{{ user.user_name }}</td></tr>
+            <tr><td class="font-bold text-sub">이메일</td><td>{{ user.email or '-' }}</td></tr>
+            <tr class="bg-soft"><td class="font-bold text-sub">전화번호</td><td>{{ user.phone or '-' }}</td></tr>
+            <tr><td class="font-bold text-sub">가입일</td><td>{{ user.join_date or '-' }}</td></tr>
+            <tr class="bg-soft"><td class="font-bold text-sub">메모</td><td>{{ user.memo or '-' }}</td></tr>
+        </table>
+    </div>
+
+    <div class="flex flex-col gap-4">
+        <div class="card card-p">
+            <h3 class="card-title text-primary text-sm mt-0 mb-4">현재 상태</h3>
+            <div style="text-align: center; margin-bottom: 1rem;">
+                {% if user.status == 'active' %}
+                    <span class="badge badge-success badge-lg">활성</span>
+                {% elif user.status == 'suspended' %}
+                    <span class="badge badge-danger badge-lg">정지</span>
+                {% else %}
+                    <span class="badge badge-neutral badge-lg">탈퇴</span>
+                {% endif %}
+            </div>
+            <form action="/members/{{ user.user_id }}/status" method="post" class="flex gap-2">
+                <select name="new_status" class="form-select flex-1">
+                    <option value="active" {% if user.status == 'active' %}selected{% endif %}>활성</option>
+                    <option value="suspended" {% if user.status == 'suspended' %}selected{% endif %}>정지</option>
+                    <option value="withdrawn" {% if user.status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
+                </select>
+                <button type="submit" class="btn-accent" style="padding: 8px 16px; background-color: var(--warning-fg);">변경</button>
+            </form>
+        </div>
+        <div class="card card-p border-danger">
+            <h3 class="card-title text-danger text-sm mt-0 mb-3">회원 삭제</h3>
+            <div class="warn-banner">삭제된 회원은 복구할 수 없습니다.</div>
+            <form action="/members/{{ user.user_id }}/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                <button type="submit" class="w-full btn-outline-danger" style="padding: 10px;">회원 삭제</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">포인트 잔액</div>
+        <div class="summary-value">{{ "{:,}".format(points.balance) }}P</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 지급</div>
+        <div class="summary-value text-success">{{ "{:,}".format(points.total_earned) }}P</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용</div>
+        <div class="summary-value text-danger">{{ "{:,}".format(points.total_spent) }}P</div>
+    </div>
+</div>
+
+<div class="card card-p mb-6">
+    <h3 class="card-title text-primary mt-0 mb-4">미션 현황 ({{ missions|length }}건)</h3>
+    {% if missions %}
+    <div style="overflow-x: auto;">
+        <table class="w-full">
+            <thead><tr>
+                <th>미션명</th>
+                <th>유형</th>
+                <th class="text-center">상태</th>
+                <th class="text-right">보상 포인트</th>
+                <th>마감일</th>
+            </tr></thead>
+            <tbody>
+                {% for m in missions %}
+                <tr>
+                    <td class="font-bold">{{ m.mission_title }}</td>
+                    <td><span class="badge badge-info">{{ m.mission_type }}</span></td>
+                    <td class="text-center">
+                        {% if m.status == 'completed' %}
+                            <span class="badge badge-success">완료</span>
+                        {% elif m.status == 'in_progress' %}
+                            <span class="badge badge-info">진행중</span>
+                        {% elif m.status == 'expired' %}
+                            <span class="badge badge-danger">만료</span>
+                        {% else %}
+                            <span class="badge badge-warning">대기</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right font-bold">{{ "{:,}".format(m.reward_points) }}P</td>
+                    <td>{{ m.due_date or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-center text-muted p-4">미션 내역이 없습니다.</p>
+    {% endif %}
+</div>
+
+<div class="card card-p">
+    <h3 class="card-title text-primary mt-0 mb-4">포인트 구매 내역 ({{ purchases|length }}건)</h3>
+    {% if purchases %}
+    <div style="overflow-x: auto;">
+        <table class="w-full">
+            <thead><tr>
+                <th>상품명</th>
+                <th class="text-right">사용 포인트</th>
+                <th class="text-center">상태</th>
+                <th>구매일</th>
+            </tr></thead>
+            <tbody>
+                {% for p in purchases %}
+                <tr>
+                    <td class="font-bold">{{ p.product_name or '(삭제된 상품)' }}</td>
+                    <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
+                    <td class="text-center">
+                        {% if p.status == 'completed' %}
+                            <span class="badge badge-success">completed</span>
+                        {% elif p.status == 'cancelled' %}
+                            <span class="badge badge-neutral">cancelled</span>
+                        {% else %}
+                            <span class="badge badge-warning">{{ p.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.purchased_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-center text-muted p-4">구매 내역이 없습니다.</p>
+    {% endif %}
+</div>
+{% endblock %}""",
+    'member_form.html': """{% extends "base.html" %}
+{% block content %}
+<h1>{{ '회원 정보 수정' if user else '신규 회원 등록' }}</h1>
+<a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">{{ '기존 회원 정보를 수정합니다.' if user else '신규 회원을 등록합니다.' }}</div>
+
+<div class="card card-p max-w-600">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">회원 ID</label>
+            {% if user %}
+                <input type="text" value="{{ user.user_id }}" disabled class="form-input bg-border-light text-sub">
+                <p class="help-text">회원 ID는 등록 후 변경할 수 없습니다.</p>
+            {% else %}
+                <input type="text" name="user_id" required placeholder="예: user_007" class="form-input">
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label class="form-label">이름</label>
+            <input type="text" name="user_name" value="{{ user.user_name if user else '' }}" required placeholder="예: 홍길동" class="form-input">
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">이메일</label>
+                <input type="email" name="email" value="{{ user.email if user else '' }}" placeholder="예: user@example.com" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">전화번호</label>
+                <input type="text" name="phone" value="{{ user.phone if user else '' }}" placeholder="010-0000-0000" class="form-input">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">가입일</label>
+            <input type="date" name="join_date" value="{{ user.join_date if user else '' }}" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">메모</label>
+            <textarea name="memo" rows="3" placeholder="관리자 메모" class="form-textarea">{{ user.memo if user and user.memo else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+    </form>
+</div>
+{% endblock %}""",
+    'system_info.html': """{% extends "base.html" %}
+{% block content %}
+<h1>시스템 정보</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">시스템 투명성</span>
+            <h3 class="font-bold text-sm">환경 및 인프라 모니터링</h3>
+        </div>
+        <p class="text-sm text-sub">
+            안정적인 서비스 운영을 위해 서버 리소스와 데이터베이스 연결 상태를 투명하게 공개합니다. 이는 시스템의 <strong>가용성(Availability)</strong>을 보장하고, 문제 발생 시 신속하게 대응하기 위한 기초 자료로 활용됩니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">서버 환경 및 애플리케이션 상태 정보를 확인합니다.</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">서버 환경</h3></div>
+        <div class="card-body" style="padding: 1.5rem;">
+            <table class="w-full">
+                <tr><th class="w-150">OS</th><td>{{ sys_info.os }}</td></tr>
+                <tr><th>Python Version</th><td>{{ sys_info.python_version }}</td></tr>
+                <tr><th>Flask Version</th><td>{{ sys_info.flask_version }}</td></tr>
+                <tr><th>Working Directory</th><td>{{ sys_info.cwd }}</td></tr>
+                <tr><th>Memory Usage</th><td>{{ sys_info.memory_mb }} MB</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">데이터베이스 정보</h3></div>
+        <div class="card-body" style="padding: 1.5rem;">
+            <table class="w-full">
+                <tr><th class="w-150">DB Type</th><td>MySQL (via SQLAlchemy)</td></tr>
+                <tr><th>DB Version</th><td>{{ db_info.version }}</td></tr>
+                <tr><th>Connection Status</th><td><span class="badge badge-success">Connected</span></td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}""",
+    'data_viewer.html': """{% extends "base.html" %}
+{% block content %}
+    <h1>수집 데이터 조회: {{ table_name }}</h1>
+
+    <div class="card guide-card">
+        <div class="card-p">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="badge badge-info">데이터 접근성</span>
+                <h3 class="font-bold text-sm">원시 데이터(Raw Data) 조회</h3>
+            </div>
+            <p class="text-sm text-sub">
+                AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 있는 그대로 조회할 수 있습니다. 데이터가 어떻게 저장되고 관리되는지 직접 확인함으로써, 데이터 파이프라인의 <strong>신뢰성</strong>을 검증할 수 있습니다.
+            </p>
+        </div>
+    </div>
+
+    <div class="info-banner">수집된 원시 데이터를 테이블별로 조회합니다.</div>
+    <div class="mb-4 flex flex-wrap gap-2">
+        <a href="/data/raw_loan_products" class="nav-btn {{ 'active' if table_name == 'raw_loan_products' else '' }}">대출 상품</a>
+        <a href="/data/raw_economic_indicators" class="nav-btn {{ 'active' if table_name == 'raw_economic_indicators' else '' }}">경제 지표</a>
+        <a href="/data/raw_income_stats" class="nav-btn {{ 'active' if table_name == 'raw_income_stats' else '' }}">소득 통계</a>
+        <a href="/data/collection_logs" class="nav-btn {{ 'active' if table_name == 'collection_logs' else '' }}">수집 로그</a>
+        <a href="/data/missions" class="nav-btn {{ 'active' if table_name == 'missions' else '' }}">미션</a>
+        <a href="/data/user_points" class="nav-btn {{ 'active' if table_name == 'user_points' else '' }}">유저 포인트</a>
+        <a href="/data/point_transactions" class="nav-btn {{ 'active' if table_name == 'point_transactions' else '' }}">포인트 거래</a>
+        <a href="/data/point_products" class="nav-btn {{ 'active' if table_name == 'point_products' else '' }}">포인트 상품</a>
+        <a href="/data/point_purchases" class="nav-btn {{ 'active' if table_name == 'point_purchases' else '' }}">포인트 구매</a>
+        <a href="/data/users" class="nav-btn {{ 'active' if table_name == 'users' else '' }}">회원</a>
+    </div>
+    <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
+        <span class="font-semibold text-sub">검색:</span>
+        <select name="search_col" class="form-select w-auto">
+            {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
+        </select>
+        <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력" class="form-input flex-1 min-w-200">
+        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" class="nav-btn">초기화</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead><tr>
+                {% for col in columns %}
+                <th class="nowrap">
+                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit;">
+                        {{ col }} {% if sort_by == col %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                    </a>
+                </th>
+                {% endfor %}
+            </tr></thead>
+            <tbody>
+                {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% else %}<tr><td colspan="{{ columns|length }}" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="flex justify-between items-center mt-4">
+        {% if page > 1 %}<a href="{{ url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">이전</a>
+        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+        <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }} ({{ "{:,}".format(total_count) }}건)</span>
+        {% if page < total_pages %}<a href="{{ url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">다음</a>
+        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
+    </div>
+{% endblock %}""",
+    'simulator.html': """{% extends "base.html" %}
+{% block content %}
+    <h1>대출 추천 시뮬레이터</h1>
+
+    <div class="card guide-card">
+        <div class="card-p">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="badge badge-info">XAI 검증 도구</span>
+                <h3 class="font-bold text-sm">알고리즘 시뮬레이션</h3>
+            </div>
+            <p class="text-sm text-sub">
+                설정한 신용 평가 가중치와 추천 알고리즘이 실제 사용자에게 어떤 결과를 보여줄지 미리 확인하는 도구입니다. 다양한 가상 프로필(사회초년생, 고소득자 등)을 입력하여 AI의 판단 결과를 검증함으로써, 알고리즘의 <strong>공정성과 정확성</strong>을 테스트할 수 있습니다.
+            </p>
+        </div>
+    </div>
+
+    <div class="info-banner">가상의 유저 프로필을 입력하여 현재 신용평가 가중치 설정이 추천 결과에 어떤 영향을 미치는지 미리 확인할 수 있습니다.</div>
+    <div class="grid-1-2">
+        <div class="card card-p h-fit">
+            <h3 class="card-title mt-0 mb-4">가상 유저 프로필</h3>
+            <form method="post">
+                <label class="form-label">연소득 (원)</label>
+                <input type="number" name="annual_income" value="{{ income }}" placeholder="예: 50000000" class="form-input mb-1">
+                <p class="help-text mb-3">원 단위로 입력합니다.</p>
+                <label class="form-label">희망 대출 금액 (원)</label>
+                <input type="number" name="desired_amount" value="{{ amount }}" placeholder="예: 100000000" class="form-input mb-1">
+                <p class="help-text mb-3">이 금액 이상을 지원하는 상품만 추천됩니다.</p>
+                <label class="form-label">고용 형태 (안정성)</label>
+                <select name="job_score" class="form-select mb-1">
+                    <option value="1.0" {% if job_score == 1.0 %}selected{% endif %}>대기업/공무원 (매우 안정)</option>
+                    <option value="0.8" {% if job_score == 0.8 %}selected{% endif %}>중견/중소기업 (안정)</option>
+                    <option value="0.5" {% if job_score == 0.5 %}selected{% endif %}>프리랜서/계약직 (보통)</option>
+                    <option value="0.2" {% if job_score == 0.2 %}selected{% endif %}>무직/기타 (불안정)</option>
+                </select>
+                <p class="help-text mb-3">고용 안정성 점수로 변환됩니다.</p>
+                <label class="form-label">보유 자산 (원)</label>
+                <input type="number" name="asset_amount" value="{{ asset_amount }}" placeholder="예: 200000000" class="form-input mb-1">
+                <p class="help-text mb-3">부동산, 금융 자산 등 총액을 원 단위로 입력합니다.</p>
+                <button type="submit" class="btn-accent w-full">추천 실행 (AI)</button>
+            </form>
+        </div>
+        <div>
+            <h3 class="card-title mt-0 mb-4">추천 결과</h3>
+            {% if result_html %}
+                <div class="table-wrapper">{{ result_html|safe }}</div>
+                <p class="text-sub text-sm mt-2">* 예상 금리는 현재 설정된 가중치 정책과 유저 프로필에 따라 계산됩니다.</p>
+            {% else %}
+                <div class="bg-soft rounded-lg text-center text-muted p-4 dashed-border">왼쪽 폼에 정보를 입력하고 추천을 실행해보세요.</div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}"""
+}
+
+for filename, content in templates_to_create.items():
+    path = os.path.join(template_dir, filename)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+app = Flask(__name__, static_folder=static_dir, static_url_path='/static', template_folder=template_dir)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev_only_fallback_key')
 
 # ==========================================================================
 # [헬퍼] 공통 유틸리티 함수
 # ==========================================================================
+
+def time_ago(value):
+    """datetime 객체를 받아 상대적인 시간 문자열로 반환하는 필터"""
+    if not value or value == "-":
+        return "-"
+    if not isinstance(value, datetime):
+        return str(value)
+    
+    now = datetime.now()
+    diff = now - value
+    
+    if diff < timedelta(seconds=60):
+        return "방금 전"
+    elif diff < timedelta(seconds=3600):
+        return f"{int(diff.seconds / 60)}분 전"
+    elif diff < timedelta(days=1):
+        return f"{int(diff.seconds / 3600)}시간 전"
+    elif diff < timedelta(days=7):
+        return f"{diff.days}일 전"
+    else:
+        return value.strftime('%Y-%m-%d')
+
+app.jinja_env.filters['time_ago'] = time_ago
 
 def get_all_configs(engine):
     """service_config 테이블 전체를 dict로 로드"""
@@ -269,1360 +2220,8 @@ except Exception as e:
     print(f"Init schema skipped: {e}")
 
 # ==========================================================================
-# [HTML] 메인 대시보드 템플릿
-# ==========================================================================
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    {% if auto_refresh %}
-    <meta http-equiv="refresh" content="30; url={{ url_for('index') }}">
-    {% endif %}
-    <title>Fintech Admin (Flask)</title>
-    <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; padding: 2rem; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header-container { background: white; padding: 1.5rem 2rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 2rem; }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        h1 { color: #1e3a8a; margin: 0; font-size: 1.5rem; font-weight: 700; }
-        .nav-bar { display: flex; flex-wrap: wrap; gap: 6px; }
-        .nav-btn { padding: 7px 14px; text-decoration: none; border-radius: 6px; font-size: 0.82rem; font-weight: bold; transition: all 0.2s; }
-        .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-direction: column; }
-        .card-header { padding: 1.25rem; border-bottom: 1px solid #f3f4f6; background-color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .card-title-group { display: flex; flex-direction: column; gap: 0.25rem; }
-        .card-title { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 0; }
-        .last-run { font-size: 0.8rem; color: #6b7280; }
-        .card-actions { display: flex; align-items: center; gap: 8px; }
-        .refresh-btn { padding: 0.5rem 0.75rem; background-color: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-        .refresh-btn:hover { background-color: #2563eb; color: white; border-color: #2563eb; }
-        .card-body { padding: 0; flex-grow: 1; display: flex; flex-direction: column; }
-        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 5px; }
-        .success { background-color: #d1fae5; color: #065f46; }
-        .error { background-color: #fee2e2; color: #991b1b; }
-        .warning { background-color: #fef3c7; color: #92400e; }
-        .log-table-container { overflow-x: auto; max-height: 350px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #f3f4f6; }
-        th { background-color: #f9fafb; color: #4b5563; font-weight: 600; position: sticky; top: 0; z-index: 10; }
-        .status-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-        .status-fail { background-color: #fef2f2; color: #dc2626; }
-        .status-success { background-color: #ecfdf5; color: #059669; }
-        .badge-on { background: #d1fae5; color: #065f46; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-        .badge-off { background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .summary-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center; }
-        .summary-value { font-size: 2rem; font-weight: 700; color: #1e3a8a; margin: 0.5rem 0; }
-        .summary-label { color: #6b7280; font-size: 0.9rem; font-weight: 600; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-container">
-            <div class="header-top">
-                <h1>Fintech Service Admin</h1>
-                <a href="/toggle_refresh" class="nav-btn" style="background-color: {{ '#d1fae5' if auto_refresh else '#f3f4f6' }}; color: {{ '#065f46' if auto_refresh else '#6b7280' }};">
-                    {{ 'Auto Refresh: ON' if auto_refresh else 'Auto Refresh: OFF' }}
-                </a>
-            </div>
-            <div class="nav-bar">
-                <a href="/" class="nav-btn" style="background-color: #dbeafe; color: #1e40af;">Home</a>
-                <a href="/members" class="nav-btn" style="background-color: #fef9c3; color: #854d0e;">회원 관리</a>
-                <a href="/collection-management" class="nav-btn" style="background-color: #fef3c7; color: #92400e;">수집 관리</a>
-                <a href="/credit-weights" class="nav-btn" style="background-color: #e0e7ff; color: #3730a3;">신용평가 설정</a>
-                <a href="/recommend-settings" class="nav-btn" style="background-color: #fce7f3; color: #9d174d;">추천 설정</a>
-                <a href="/products" class="nav-btn" style="background-color: #d1fae5; color: #065f46;">상품 관리</a>
-                <a href="/missions" class="nav-btn" style="background-color: #ede9fe; color: #5b21b6;">미션 관리</a>
-                <a href="/points" class="nav-btn" style="background-color: #ccfbf1; color: #115e59;">포인트 관리</a>
-                <a href="/point-products" class="nav-btn" style="background-color: #ffedd5; color: #9a3412;">포인트 상품</a>
-                <a href="/simulator" class="nav-btn" style="background-color: #fce7f3; color: #9d174d;">시뮬레이터</a>
-                <a href="/data/raw_loan_products" class="nav-btn" style="background-color: #e0e7ff; color: #3730a3;">데이터 조회</a>
-                <a href="/logout" class="nav-btn" style="background-color: #fee2e2; color: #991b1b;">로그아웃</a>
-            </div>
-        </div>
-
-        {% if message %}
-            <div class="alert {{ status }}">{{ message }}</div>
-        {% endif %}
-
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-label">대출 상품 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.loan_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">경제 지표 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.economy_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">소득 통계 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.income_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">총 수집 로그</div>
-                <div class="summary-value">{{ "{:,}".format(stats.log_count | default(0)) }}</div>
-            </div>
-        </div>
-
-        <!-- 신용 평가 가중치 요약 -->
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1.1rem;">현재 신용 평가 가중치</h3>
-                <a href="/credit-weights" class="nav-btn" style="background-color: #dbeafe; color: #1e40af; padding: 6px 12px; font-size: 0.8rem;">설정 변경</a>
-            </div>
-            <div style="display: flex; justify-content: space-around; align-items: center;">
-               <div style="text-align: center;">
-                   <div style="font-size: 0.9rem; color: #6b7280; margin-bottom: 5px;">소득 비중</div>
-                   <div style="font-size: 1.8rem; font-weight: 700; color: #3b82f6;">{{ stats.WEIGHT_INCOME | default(0.5) }}</div>
-                </div>
-                <div style="text-align: center; border-left: 1px solid #f3f4f6; border-right: 1px solid #f3f4f6; padding: 0 40px;">
-                    <div style="font-size: 0.9rem; color: #6b7280; margin-bottom: 5px;">고용 안정성</div>
-                    <div style="font-size: 1.8rem; font-weight: 700; color: #10b981;">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 0.9rem; color: #6b7280; margin-bottom: 5px;">자산 비중</div>
-                    <div style="font-size: 1.8rem; font-weight: 700; color: #f59e0b;">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard-grid">
-            <!-- Card 1: Loan -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title-group">
-                        <h3 class="card-title">금감원 대출상품</h3>
-                        <span class="last-run">최근 실행: {{ loan_last_run }}</span>
-                    </div>
-                    <div class="card-actions">
-                        <span class="{{ 'badge-on' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'badge-off' }}">
-                            {{ 'ON' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'OFF' }}
-                        </span>
-                        <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="loan" class="refresh-btn">새로고침</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body">{{ loan_log_table|safe }}</div>
-            </div>
-
-            <!-- Card 2: Economy -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title-group">
-                        <h3 class="card-title">경제 지표</h3>
-                        <span class="last-run">최근 실행: {{ economy_last_run }}</span>
-                    </div>
-                    <div class="card-actions">
-                        <span class="{{ 'badge-on' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'badge-off' }}">
-                            {{ 'ON' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'OFF' }}
-                        </span>
-                        <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="economy" class="refresh-btn">새로고침</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body">{{ economy_log_table|safe }}</div>
-            </div>
-
-            <!-- Card 3: Income -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title-group">
-                        <h3 class="card-title">통계청 소득정보</h3>
-                        <span class="last-run">최근 실행: {{ income_last_run }}</span>
-                    </div>
-                    <div class="card-actions">
-                        <span class="{{ 'badge-on' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'badge-off' }}">
-                            {{ 'ON' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'OFF' }}
-                        </span>
-                        <form action="/trigger" method="post" style="margin:0;">
-                            <button type="submit" name="job" value="income" class="refresh-btn">새로고침</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body">{{ income_log_table|safe }}</div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-# ==========================================================================
-# [HTML] 로그인 화면
-# ==========================================================================
-LOGIN_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8"><title>Login - Fintech Admin</title>
-    <style>
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-container { background: white; padding: 2.5rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h1 { color: #1e3a8a; text-align: center; margin-bottom: 2rem; font-size: 1.5rem; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
-        input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        button:hover { background-color: #2563eb; }
-        .error { color: #dc2626; text-align: center; margin-top: 1rem; font-size: 0.9rem; }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>관리자 로그인</h1>
-        <form method="post">
-            <input type="text" name="username" placeholder="아이디" required>
-            <input type="password" name="password" placeholder="비밀번호" required>
-            <button type="submit">로그인</button>
-        </form>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}<div class="error">{{ messages[0] }}</div>{% endif %}
-        {% endwith %}
-    </div>
-</body>
-</html>
-"""
-
-# ==========================================================================
-# [HTML] 데이터 조회 템플릿
-# ==========================================================================
-DATA_VIEWER_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-    <h1>수집 데이터 조회: {{ table_name }}</h1>
-    <div style="margin-bottom: 20px;">
-        <a href="/data/raw_loan_products" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'raw_loan_products' else '#6b7280' }}">대출 상품</a>
-        <a href="/data/raw_economic_indicators" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'raw_economic_indicators' else '#6b7280' }}">경제 지표</a>
-        <a href="/data/raw_income_stats" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'raw_income_stats' else '#6b7280' }}">소득 통계</a>
-        <a href="/data/collection_logs" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'collection_logs' else '#6b7280' }}">수집 로그</a>
-        <a href="/data/missions" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'missions' else '#6b7280' }}">미션</a>
-        <a href="/data/user_points" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'user_points' else '#6b7280' }}">유저 포인트</a>
-        <a href="/data/point_transactions" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_transactions' else '#6b7280' }}">포인트 거래</a>
-        <a href="/data/point_products" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_products' else '#6b7280' }}">포인트 상품</a>
-        <a href="/data/point_purchases" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'point_purchases' else '#6b7280' }}">포인트 구매</a>
-        <a href="/data/users" style="margin-right: 10px; font-weight: bold; color: {{ '#2563eb' if table_name == 'users' else '#6b7280' }}">회원</a>
-    </div>
-    <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" style="margin-bottom: 20px; background: #f9fafb; padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <span style="font-weight: bold; color: #4b5563;">검색:</span>
-        <select name="search_col" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
-            {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
-        </select>
-        <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력..." style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; flex-grow: 1; min-width: 200px;">
-        <button type="submit" style="padding: 8px 16px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">검색</button>
-        {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" style="padding: 8px 16px; background-color: #9ca3af; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">초기화</a>{% endif %}
-    </form>
-    <div style="overflow-x: auto; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr>
-                {% for col in columns %}
-                <th style="background-color: #f3f4f6; padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb; white-space: nowrap;">
-                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: #374151;">
-                        {{ col }} {% if sort_by == col %}<span style="color: #2563eb;">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
-                    </a>
-                </th>
-                {% endfor %}
-            </tr></thead>
-            <tbody>
-                {% for row in rows %}<tr>{% for cell in row %}<td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ cell }}</td>{% endfor %}</tr>
-                {% else %}<tr><td colspan="{{ columns|length }}" style="padding: 20px; text-align: center; color: #6b7280;">데이터가 없습니다.</td></tr>{% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 15px;">
-        {% if page > 1 %}<a href="{{ url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" style="padding: 8px 16px; background-color: #f3f4f6; color: #374151; text-decoration: none; border-radius: 6px; font-weight: bold;">이전</a>
-        {% else %}<span style="padding: 8px 16px; background-color: #f9fafb; color: #9ca3af; border-radius: 6px;">이전</span>{% endif %}
-        <span style="font-weight: 600; color: #4b5563;">Page <span style="color: #2563eb;">{{ page }}</span> / {{ total_pages }} ({{ "{:,}".format(total_count) }}건)</span>
-        {% if page < total_pages %}<a href="{{ url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" style="padding: 8px 16px; background-color: #f3f4f6; color: #374151; text-decoration: none; border-radius: 6px; font-weight: bold;">다음</a>
-        {% else %}<span style="padding: 8px 16px; background-color: #f9fafb; color: #9ca3af; border-radius: 6px;">다음</span>{% endif %}
-    </div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] 추천 시뮬레이터
-# ==========================================================================
-SIMULATOR_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-    <h1>대출 추천 시뮬레이터</h1>
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: fit-content;">
-            <h3 style="margin-top: 0;">가상 유저 프로필</h3>
-            <form method="post">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">연소득 (원)</label>
-                <input type="number" name="annual_income" value="{{ income }}" style="width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">희망 대출 금액 (원)</label>
-                <input type="number" name="desired_amount" value="{{ amount }}" style="width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">고용 형태 (안정성)</label>
-                <select name="job_score" style="width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
-                    <option value="1.0" {% if job_score == 1.0 %}selected{% endif %}>대기업/공무원 (매우 안정)</option>
-                    <option value="0.8" {% if job_score == 0.8 %}selected{% endif %}>중견/중소기업 (안정)</option>
-                    <option value="0.5" {% if job_score == 0.5 %}selected{% endif %}>프리랜서/계약직 (보통)</option>
-                    <option value="0.2" {% if job_score == 0.2 %}selected{% endif %}>무직/기타 (불안정)</option>
-                </select>
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">보유 자산 (원)</label>
-                <input type="number" name="asset_amount" value="{{ asset_amount }}" style="width: 100%; padding: 10px; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <button type="submit" style="width: 100%;">추천 실행</button>
-            </form>
-        </div>
-        <div>
-            <h3 style="margin-top: 0;">추천 결과</h3>
-            {% if result_html %}
-                <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">{{ result_html|safe }}</div>
-                <p style="color: #6b7280; font-size: 0.9rem; margin-top: 10px;">* 예상 금리는 현재 설정된 가중치 정책과 유저 프로필에 따라 계산됩니다.</p>
-            {% else %}
-                <div style="background: #f9fafb; padding: 2rem; border-radius: 12px; text-align: center; color: #9ca3af; border: 2px dashed #e5e7eb;">왼쪽 폼에 정보를 입력하고 추천을 실행해보세요.</div>
-            {% endif %}
-        </div>
-    </div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F1: 수집 관리 페이지
-# ==========================================================================
-COLLECTION_MGMT_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>금융 데이터 수집 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">데이터 소스별 수집 활성화 여부를 관리하고 수동 수집을 실행합니다.</p>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-    {% for src in sources %}
-    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; padding: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0; font-size: 1.1rem; color: #111827;">{{ src.label }}</h3>
-            <span class="{{ 'badge-on' if src.enabled else 'badge-off' }}" style="padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;
-                background: {{ '#d1fae5' if src.enabled else '#fee2e2' }}; color: {{ '#065f46' if src.enabled else '#991b1b' }};">
-                {{ 'ON' if src.enabled else 'OFF' }}
-            </span>
-        </div>
-        <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
-            <div>최근 실행: {{ src.last_run }}</div>
-            <div>최근 상태: <span style="font-weight: 600; color: {{ '#059669' if src.last_status == 'SUCCESS' else '#dc2626' if src.last_status == 'FAIL' else '#6b7280' }};">{{ src.last_status or '-' }}</span></div>
-            <div>수집 건수: {{ src.last_count }}</div>
-        </div>
-        <div style="display: flex; gap: 8px;">
-            <form action="/toggle_collector" method="post" style="flex: 1;">
-                <input type="hidden" name="source" value="{{ src.key }}">
-                <button type="submit" style="width: 100%; padding: 8px; border: 1px solid {{ '#dc2626' if src.enabled else '#059669' }}; background: {{ '#fef2f2' if src.enabled else '#ecfdf5' }}; color: {{ '#dc2626' if src.enabled else '#059669' }}; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                    {{ '비활성화' if src.enabled else '활성화' }}
-                </button>
-            </form>
-            <form action="/trigger" method="post" style="flex: 1;">
-                <button type="submit" name="job" value="{{ src.trigger_val }}" style="width: 100%; padding: 8px; background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                    {{ 'disabled' if not src.enabled else '' }}>수동 수집</button>
-            </form>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F2: 신용평가 가중치 관리
-# ==========================================================================
-CREDIT_WEIGHTS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>신용평가 가중치 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">신용 평가 로직의 구성 요소를 수치화하여 조절합니다. 변경 사항은 대출 추천 결과에 즉시 반영됩니다.</p>
-
-<form method="post">
-    <!-- 섹션 1: 핵심 가중치 -->
-    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">핵심 가중치 (합계 = 1.0)</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #3b82f6;">소득 비중 (WEIGHT_INCOME)</label>
-                <input type="range" min="0" max="1" step="0.01" name="income_weight" value="{{ income_weight }}" id="rng_income" oninput="syncWeight()" style="width: 100%;">
-                <input type="number" step="0.01" min="0" max="1" id="num_income" value="{{ income_weight }}" onchange="syncFromNum('income')" style="width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #10b981;">고용 안정성 (WEIGHT_JOB_STABILITY)</label>
-                <input type="range" min="0" max="1" step="0.01" name="job_weight" value="{{ job_weight }}" id="rng_job" oninput="syncWeight()" style="width: 100%;">
-                <input type="number" step="0.01" min="0" max="1" id="num_job" value="{{ job_weight }}" onchange="syncFromNum('job')" style="width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #f59e0b;">자산 비중 (WEIGHT_ESTATE_ASSET)</label>
-                <input type="range" min="0" max="1" step="0.01" name="asset_weight" value="{{ asset_weight }}" id="rng_asset" oninput="syncWeight()" style="width: 100%;">
-                <input type="number" step="0.01" min="0" max="1" id="num_asset" value="{{ asset_weight }}" onchange="syncFromNum('asset')" style="width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-        </div>
-        <!-- 합계 표시 + 비율 바 -->
-        <div style="margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 700;">합계: <span id="weightSum" style="color: {{ '#059669' if (income_weight + job_weight + asset_weight) | round(2) == 1.0 else '#dc2626' }};">{{ (income_weight + job_weight + asset_weight) | round(2) }}</span></div>
-        <div style="display: flex; height: 24px; border-radius: 6px; overflow: hidden; border: 1px solid #e5e7eb;">
-            <div id="bar_income" style="background: #3b82f6; transition: width 0.2s; width: {{ income_weight * 100 }}%;"></div>
-            <div id="bar_job" style="background: #10b981; transition: width 0.2s; width: {{ job_weight * 100 }}%;"></div>
-            <div id="bar_asset" style="background: #f59e0b; transition: width 0.2s; width: {{ asset_weight * 100 }}%;"></div>
-        </div>
-    </div>
-
-    <!-- 섹션 2: 정규화 기준 -->
-    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">정규화 기준 (Normalization Ceiling)</h3>
-        <p style="color: #6b7280; font-size: 0.85rem;">이 금액 이상이면 해당 항목 점수가 만점(1.0)이 됩니다.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">소득 만점 기준 (원)</label>
-                <input type="number" name="norm_income_ceiling" value="{{ norm_income_ceiling | int }}" step="10000000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <span style="font-size: 0.8rem; color: #6b7280;">현재: {{ "{:,.0f}".format(norm_income_ceiling) }}원</span>
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">자산 만점 기준 (원)</label>
-                <input type="number" name="norm_asset_ceiling" value="{{ norm_asset_ceiling | int }}" step="10000000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <span style="font-size: 0.8rem; color: #6b7280;">현재: {{ "{:,.0f}".format(norm_asset_ceiling) }}원</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 섹션 3: XAI 설명 임계값 -->
-    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">XAI 설명 임계값 (Explanation Thresholds)</h3>
-        <p style="color: #6b7280; font-size: 0.85rem;">각 요소의 기여도가 이 값 이상이어야 추천 사유에 표시됩니다.</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">소득 기여도 임계값</label>
-                <input type="number" step="0.01" name="xai_threshold_income" value="{{ xai_threshold_income }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">고용 기여도 임계값</label>
-                <input type="number" step="0.01" name="xai_threshold_job" value="{{ xai_threshold_job }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">자산 기여도 임계값</label>
-                <input type="number" step="0.01" name="xai_threshold_asset" value="{{ xai_threshold_asset }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-        </div>
-    </div>
-
-    <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">설정 저장</button>
-</form>
-
-<script>
-function syncWeight() {
-    var i = parseFloat(document.getElementById('rng_income').value);
-    var j = parseFloat(document.getElementById('rng_job').value);
-    var a = parseFloat(document.getElementById('rng_asset').value);
-    document.getElementById('num_income').value = i.toFixed(2);
-    document.getElementById('num_job').value = j.toFixed(2);
-    document.getElementById('num_asset').value = a.toFixed(2);
-    var sum = (i + j + a).toFixed(2);
-    var el = document.getElementById('weightSum');
-    el.textContent = sum;
-    el.style.color = Math.abs(parseFloat(sum) - 1.0) < 0.015 ? '#059669' : '#dc2626';
-    document.getElementById('bar_income').style.width = (i * 100) + '%';
-    document.getElementById('bar_job').style.width = (j * 100) + '%';
-    document.getElementById('bar_asset').style.width = (a * 100) + '%';
-}
-function syncFromNum(which) {
-    var val = parseFloat(document.getElementById('num_' + which).value);
-    document.getElementById('rng_' + which).value = val;
-    syncWeight();
-}
-</script>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F3: 대출 추천 가중치 관리
-# ==========================================================================
-RECOMMEND_SETTINGS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>대출 추천 알고리즘 설정</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">추천 결과의 정렬, 필터링, 표시 방식을 관리합니다.</p>
-
-<form method="post">
-    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">추천 파라미터</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">최대 추천 수</label>
-                <input type="number" name="max_count" value="{{ max_count }}" min="1" max="20" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <p style="font-size: 0.8rem; color: #6b7280;">사용자에게 보여줄 최대 추천 상품 수 (1~20)</p>
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">정렬 우선순위</label>
-                <select name="sort_priority" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
-                    <option value="rate" {% if sort_priority == 'rate' %}selected{% endif %}>예상 금리 낮은 순 (rate)</option>
-                    <option value="limit" {% if sort_priority == 'limit' %}selected{% endif %}>대출 한도 높은 순 (limit)</option>
-                </select>
-                <p style="font-size: 0.8rem; color: #6b7280;">추천 결과의 1차 정렬 기준</p>
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Fallback 모드</label>
-                <select name="fallback_mode" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
-                    <option value="show_all" {% if fallback_mode == 'show_all' %}selected{% endif %}>전체 상품 표시 (show_all)</option>
-                    <option value="show_none" {% if fallback_mode == 'show_none' %}selected{% endif %}>빈 결과 반환 (show_none)</option>
-                </select>
-                <p style="font-size: 0.8rem; color: #6b7280;">희망 대출액을 충족하는 상품이 없을 때 동작</p>
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">금리 스프레드 민감도</label>
-                <input type="number" step="0.1" name="rate_sensitivity" value="{{ rate_sensitivity }}" min="0.1" max="3.0" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-                <p style="font-size: 0.8rem; color: #6b7280;">1.0 = 기본. 높을수록 신용점수가 금리에 미치는 영향 증가</p>
-            </div>
-        </div>
-    </div>
-    <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">설정 저장</button>
-</form>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F4: 대출 상품 관리
-# ==========================================================================
-PRODUCTS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>대출 상품 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">수집된 대출 상품의 서비스 노출 여부를 관리합니다.</p>
-
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div style="background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center; flex: 1;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">전체 상품</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #1e3a8a;">{{ total_count }}</div>
-    </div>
-    <div style="background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center; flex: 1;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">노출 중</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #059669;">{{ visible_count }}</div>
-    </div>
-    <div style="background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center; flex: 1;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">비노출</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #dc2626;">{{ hidden_count }}</div>
-    </div>
-</div>
-
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb;">은행</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb;">상품명</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: right; border-bottom: 2px solid #e5e7eb;">최저 금리</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: right; border-bottom: 2px solid #e5e7eb;">최고 금리</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: right; border-bottom: 2px solid #e5e7eb;">대출 한도</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">상태</th>
-            <th style="background: #f3f4f6; padding: 10px; text-align: center; border-bottom: 2px solid #e5e7eb;">관리</th>
-        </tr></thead>
-        <tbody>
-            {% for p in products %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.bank_name }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.product_name }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">{{ p.loan_rate_min }}%</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">{{ p.loan_rate_max }}%</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">{{ "{:,.0f}".format(p.loan_limit) }}원</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    {% if p.is_visible == 1 %}
-                        <span style="background: #d1fae5; color: #065f46; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">노출</span>
-                    {% else %}
-                        <span style="background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">비노출</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    <form action="/products/toggle_visibility" method="post" style="display:inline;">
-                        <input type="hidden" name="bank_name" value="{{ p.bank_name }}">
-                        <input type="hidden" name="product_name" value="{{ p.product_name }}">
-                        <button type="submit" style="padding: 5px 14px; border: 1px solid {{ '#dc2626' if p.is_visible == 1 else '#059669' }}; background: {{ '#fef2f2' if p.is_visible == 1 else '#ecfdf5' }}; color: {{ '#dc2626' if p.is_visible == 1 else '#059669' }}; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
-                            {{ '비노출 처리' if p.is_visible == 1 else '노출 처리' }}
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">등록된 상품이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F5: 미션 관리
-# ==========================================================================
-MISSIONS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>미션 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">AI가 사용자의 대출 목적과 상황에 맞게 생성한 미션을 모니터링합니다.</p>
-
-<!-- 통계 카드 -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-    <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">전체 미션</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #1e3a8a;">{{ total }}</div>
-    </div>
-    <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">대기(pending)</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #6b7280;">{{ pending }}</div>
-    </div>
-    <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">진행(in_progress)</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #3b82f6;">{{ in_progress }}</div>
-    </div>
-    <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">완료(completed)</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #059669;">{{ completed }}</div>
-    </div>
-    <div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; text-align: center;">
-        <div style="color: #6b7280; font-size: 0.85rem; font-weight: 600;">완료율</div>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #1e3a8a;">{{ "%.1f" | format(completion_rate) }}%</div>
-    </div>
-</div>
-
-<!-- 유형별 분포 -->
-<div style="background: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-    <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1rem;">유형별 분포</h3>
-    {% for type_name, count in type_counts.items() %}
-    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 10px;">
-        <span style="width: 90px; font-size: 0.85rem; font-weight: 600;">{{ type_name }}</span>
-        <div style="flex: 1; background: #f3f4f6; border-radius: 4px; height: 20px;">
-            <div style="background: #3b82f6; height: 100%; border-radius: 4px; width: {{ (count / total * 100) if total > 0 else 0 }}%; min-width: 2px;"></div>
-        </div>
-        <span style="width: 30px; text-align: right; font-size: 0.85rem;">{{ count }}</span>
-    </div>
-    {% endfor %}
-</div>
-
-<!-- 필터 -->
-<form method="get" style="background: #f9fafb; padding: 12px 15px; border-radius: 8px; margin-bottom: 1rem; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-    <span style="font-weight: bold; color: #4b5563;">필터:</span>
-    <select name="status_filter" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
-        <option value="">전체 상태</option>
-        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>대기 (pending)</option>
-        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>진행 (in_progress)</option>
-        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>완료 (completed)</option>
-        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료 (expired)</option>
-    </select>
-    <select name="type_filter" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
-        <option value="">전체 유형</option>
-        <option value="savings" {% if type_filter == 'savings' %}selected{% endif %}>savings</option>
-        <option value="spending" {% if type_filter == 'spending' %}selected{% endif %}>spending</option>
-        <option value="credit" {% if type_filter == 'credit' %}selected{% endif %}>credit</option>
-        <option value="investment" {% if type_filter == 'investment' %}selected{% endif %}>investment</option>
-        <option value="lifestyle" {% if type_filter == 'lifestyle' %}selected{% endif %}>lifestyle</option>
-    </select>
-    <button type="submit" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">적용</button>
-    {% if status_filter or type_filter %}
-        <a href="/missions" style="padding: 8px 16px; background: #9ca3af; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">초기화</a>
-    {% endif %}
-</form>
-
-<!-- 미션 목록 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유저</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">미션 제목</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유형</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">대출 목적</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">상태</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">난이도</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">포인트</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">마감일</th>
-        </tr></thead>
-        <tbody>
-            {% for m in missions %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.mission_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.user_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">
-                    <a href="/missions/{{ m.mission_id }}" style="color: #2563eb; text-decoration: none;">{{ m.mission_title }}</a>
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-                    <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ m.mission_type }}</span>
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.loan_purpose or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-                    {% if m.status == 'completed' %}
-                        <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">completed</span>
-                    {% elif m.status == 'in_progress' %}
-                        <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">in_progress</span>
-                    {% elif m.status == 'expired' %}
-                        <span style="background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">expired</span>
-                    {% else %}
-                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">pending</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.difficulty }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.reward_points }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ m.due_date or '-' }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="9" style="padding: 20px; text-align: center; color: #6b7280;">미션이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-MISSION_DETAIL_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>미션 상세</h1>
-<a href="/missions" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
-
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563; width: 150px;">Mission ID</td><td style="padding: 10px;">{{ mission.mission_id }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">유저 ID</td><td style="padding: 10px;">{{ mission.user_id }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">미션 제목</td><td style="padding: 10px; font-weight: 700;">{{ mission.mission_title }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">미션 설명</td><td style="padding: 10px;">{{ mission.mission_description or '-' }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">유형</td><td style="padding: 10px;">{{ mission.mission_type }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">대출 목적</td><td style="padding: 10px;">{{ mission.loan_purpose or '-' }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">상태</td><td style="padding: 10px;">{{ mission.status }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">난이도</td><td style="padding: 10px;">{{ mission.difficulty }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">보상 포인트</td><td style="padding: 10px;">{{ mission.reward_points }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">마감일</td><td style="padding: 10px;">{{ mission.due_date or '-' }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">완료일</td><td style="padding: 10px;">{{ mission.completed_at or '-' }}</td></tr>
-        <tr><td style="padding: 10px; font-weight: 600; color: #4b5563;">생성일</td><td style="padding: 10px;">{{ mission.created_at }}</td></tr>
-    </table>
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F6: 포인트 관리
-# ==========================================================================
-POINTS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>포인트 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">유저별 포인트 현황을 모니터링하고 수동으로 포인트를 지급/차감합니다.</p>
-
-<!-- 통계 카드 -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card">
-        <div class="summary-label">총 유저 수</div>
-        <div class="summary-value">{{ user_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 유통 포인트</div>
-        <div class="summary-value">{{ "{:,}".format(total_balance) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 지급 포인트</div>
-        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(total_earned) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용 포인트</div>
-        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(total_spent) }}</div>
-    </div>
-</div>
-
-<!-- 수동 포인트 조정 -->
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-    <h3 style="margin-top: 0; color: #1e3a8a; font-size: 1.1rem;">수동 포인트 조정</h3>
-    <form method="post" action="/points/adjust" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 150px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">유저 ID</label>
-            <input type="text" name="user_id" placeholder="예: user_001" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="flex: 1; min-width: 120px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">금액 (양수=지급, 음수=차감)</label>
-            <input type="number" name="amount" placeholder="예: 100 또는 -50" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="flex: 2; min-width: 200px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem;">사유</label>
-            <input type="text" name="reason" placeholder="예: 이벤트 보상, 오류 정정" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <button type="submit" style="padding: 8px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">포인트 조정</button>
-    </form>
-</div>
-
-<!-- 유저 포인트 테이블 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유저 ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">잔액</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">총 지급</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">총 사용</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">최근 업데이트</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상세</th>
-        </tr></thead>
-        <tbody>
-            {% for u in users %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ u.user_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 700; color: #1e3a8a;">{{ "{:,}".format(u.balance) }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #059669;">{{ "{:,}".format(u.total_earned) }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #dc2626;">{{ "{:,}".format(u.total_spent) }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.updated_at if u.updated_at else '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    <a href="/points/{{ u.user_id }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">거래 내역</a>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">포인트 데이터가 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-POINT_DETAIL_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>포인트 상세 - {{ user_id }}</h1>
-<a href="/points" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
-
-<!-- 유저 잔액 요약 -->
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">현재 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(user.total_earned) }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(user.total_spent) }}</div>
-    </div>
-</div>
-
-<!-- 거래 내역 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <h3 style="margin: 0 0 1rem 0.5rem; color: #1e3a8a; font-size: 1rem;">거래 내역</h3>
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">금액</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유형</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">사유</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">관리자</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">참조 ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">일시</th>
-        </tr></thead>
-        <tbody>
-            {% for t in transactions %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.transaction_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 700; color: {{ '#059669' if t.amount > 0 else '#dc2626' }};">{{ '{:+,}'.format(t.amount) }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-                    {% if t.transaction_type == 'mission_reward' %}
-                        <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">mission_reward</span>
-                    {% elif t.transaction_type == 'purchase' %}
-                        <span style="background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">purchase</span>
-                    {% elif t.transaction_type == 'manual' %}
-                        <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">manual</span>
-                    {% else %}
-                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ t.transaction_type }}</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.reason or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.admin_id or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.reference_id or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ t.created_at }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">거래 내역이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F7: 포인트 상품 관리
-# ==========================================================================
-POINT_PRODUCTS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>포인트 상품 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">포인트로 교환 가능한 상품(쿠폰)을 관리합니다.</p>
-
-<!-- 통계 카드 -->
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">전체 상품</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">활성 상품</div>
-        <div class="summary-value" style="color: #059669;">{{ active_count }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">비활성 상품</div>
-        <div class="summary-value" style="color: #dc2626;">{{ inactive_count }}</div>
-    </div>
-</div>
-
-<!-- 액션 버튼 -->
-<div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
-    <a href="/point-products/add" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">상품 추가</a>
-    <a href="/point-products/purchases" style="padding: 10px 20px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 8px; font-weight: bold;">구매 내역 조회</a>
-</div>
-
-<!-- 상품 테이블 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">상품명</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유형</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">포인트 가격</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">재고</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">관리</th>
-        </tr></thead>
-        <tbody>
-            {% for p in products %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.product_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.product_name }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-                    <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.product_type }}</span>
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: {{ '#dc2626' if p.stock_quantity <= 5 else '#111827' }}; font-weight: {{ '700' if p.stock_quantity <= 5 else '400' }};">{{ p.stock_quantity }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    {% if p.is_active == 1 %}
-                        <span class="badge-on">활성</span>
-                    {% else %}
-                        <span class="badge-off">비활성</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    <div style="display: flex; gap: 6px; justify-content: center;">
-                        <a href="/point-products/{{ p.product_id }}/edit" style="padding: 4px 12px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">수정</a>
-                        <form action="/point-products/{{ p.product_id }}/toggle" method="post" style="display:inline;">
-                            <button type="submit" style="padding: 4px 12px; border: 1px solid {{ '#dc2626' if p.is_active == 1 else '#059669' }}; background: {{ '#fef2f2' if p.is_active == 1 else '#ecfdf5' }}; color: {{ '#dc2626' if p.is_active == 1 else '#059669' }}; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
-                                {{ '비활성' if p.is_active == 1 else '활성' }}
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">등록된 상품이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-POINT_PRODUCT_FORM_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>{{ '상품 수정' if product else '상품 추가' }}</h1>
-<a href="/point-products" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
-
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; max-width: 600px;">
-    <form method="post">
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">상품명</label>
-            <input type="text" name="product_name" value="{{ product.product_name if product else '' }}" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">상품 유형</label>
-            <select name="product_type" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: white;">
-                <option value="coupon" {% if product and product.product_type == 'coupon' %}selected{% endif %}>coupon (쿠폰)</option>
-                <option value="gift_card" {% if product and product.product_type == 'gift_card' %}selected{% endif %}>gift_card (상품권)</option>
-                <option value="discount" {% if product and product.product_type == 'discount' %}selected{% endif %}>discount (할인)</option>
-                <option value="merchandise" {% if product and product.product_type == 'merchandise' %}selected{% endif %}>merchandise (상품)</option>
-                <option value="experience" {% if product and product.product_type == 'experience' %}selected{% endif %}>experience (이용권)</option>
-            </select>
-        </div>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">설명</label>
-            <textarea name="description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; resize: vertical;">{{ product.description if product else '' }}</textarea>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 6px;">포인트 가격</label>
-                <input type="number" name="point_cost" value="{{ product.point_cost if product else '' }}" min="1" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 6px;">재고 수량</label>
-                <input type="number" name="stock_quantity" value="{{ product.stock_quantity if product else '' }}" min="0" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-        </div>
-        <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">저장</button>
-    </form>
-</div>
-{% endblock %}
-"""
-
-POINT_PURCHASES_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>포인트 구매 내역</h1>
-<a href="/point-products" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">상품 목록으로 돌아가기</a>
-
-<!-- 통계 -->
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 구매 건수</div>
-        <div class="summary-value">{{ total_purchases }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 사용 포인트</div>
-        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(total_points_used) }}P</div>
-    </div>
-</div>
-
-<!-- 구매 내역 테이블 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">구매 ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">유저 ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">상품명</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">사용 포인트</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">구매일</th>
-        </tr></thead>
-        <tbody>
-            {% for p in purchases %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.purchase_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.user_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.product_name or '(삭제된 상품)' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    {% if p.status == 'completed' %}
-                        <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">completed</span>
-                    {% elif p.status == 'cancelled' %}
-                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">cancelled</span>
-                    {% else %}
-                        <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.status }}</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ p.purchased_at }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="6" style="padding: 20px; text-align: center; color: #6b7280;">구매 내역이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
-# [HTML] F8: 회원 관리
-# ==========================================================================
-MEMBERS_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>회원 관리</h1>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">회원 목록을 조회하고 관리합니다.</p>
-
-<!-- 통계 카드 -->
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">전체 회원</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">활성 회원</div>
-        <div class="summary-value" style="color: #059669;">{{ active_count }}</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">정지 회원</div>
-        <div class="summary-value" style="color: #dc2626;">{{ suspended_count }}</div>
-    </div>
-</div>
-
-<!-- 검색/필터 + 회원 추가 버튼 -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
-    <form method="get" action="/members" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="text" name="search_name" value="{{ search_name }}" placeholder="이름 검색..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; min-width: 150px;">
-        <select name="search_status" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
-            <option value="">전체 상태</option>
-            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
-            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
-            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
-        </select>
-        <button type="submit" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">검색</button>
-        {% if search_name or search_status %}
-        <a href="/members" style="padding: 8px 16px; background: #9ca3af; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">초기화</a>
-        {% endif %}
-    </form>
-    <a href="/members/add" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">회원 추가</a>
-</div>
-
-<!-- 회원 테이블 -->
-<div style="background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead><tr>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">회원 ID</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">이름</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">이메일</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">전화번호</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb;">가입일</th>
-            <th style="background: #f3f4f6; padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">관리</th>
-        </tr></thead>
-        <tbody>
-            {% for u in members %}
-            <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-family: monospace;">{{ u.user_id }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ u.user_name }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.email or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.phone or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    {% if u.status == 'active' %}
-                        <span style="background: #ecfdf5; color: #059669; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">활성</span>
-                    {% elif u.status == 'suspended' %}
-                        <span style="background: #fef2f2; color: #dc2626; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">정지</span>
-                    {% else %}
-                        <span style="background: #f3f4f6; color: #6b7280; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">탈퇴</span>
-                    {% endif %}
-                </td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">{{ u.join_date or '-' }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                    <a href="/members/{{ u.user_id }}" style="padding: 4px 12px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">상세</a>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="7" style="padding: 20px; text-align: center; color: #6b7280;">등록된 회원이 없습니다.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-"""
-
-MEMBER_DETAIL_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>회원 상세 정보</h1>
-<a href="/members" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
-
-<!-- 기본 정보 카드 -->
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0; color: #1e3a8a;">기본 정보</h3>
-            <a href="/members/{{ user.user_id }}/edit" style="padding: 6px 16px; background: #eff6ff; color: #2563eb; text-decoration: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">수정</a>
-        </div>
-        <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563; width: 120px;">회원 ID</td><td style="padding: 8px 12px; font-family: monospace;">{{ user.user_id }}</td></tr>
-            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">이름</td><td style="padding: 8px 12px;">{{ user.user_name }}</td></tr>
-            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">이메일</td><td style="padding: 8px 12px;">{{ user.email or '-' }}</td></tr>
-            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">전화번호</td><td style="padding: 8px 12px;">{{ user.phone or '-' }}</td></tr>
-            <tr><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">가입일</td><td style="padding: 8px 12px;">{{ user.join_date or '-' }}</td></tr>
-            <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: 600; color: #4b5563;">메모</td><td style="padding: 8px 12px;">{{ user.memo or '-' }}</td></tr>
-        </table>
-    </div>
-
-    <!-- 상태 변경 + 삭제 -->
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
-            <h3 style="margin: 0 0 1rem 0; color: #1e3a8a; font-size: 1rem;">현재 상태</h3>
-            <div style="text-align: center; margin-bottom: 1rem;">
-                {% if user.status == 'active' %}
-                    <span style="background: #ecfdf5; color: #059669; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">활성</span>
-                {% elif user.status == 'suspended' %}
-                    <span style="background: #fef2f2; color: #dc2626; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">정지</span>
-                {% else %}
-                    <span style="background: #f3f4f6; color: #6b7280; padding: 6px 20px; border-radius: 9999px; font-size: 1rem; font-weight: 700;">탈퇴</span>
-                {% endif %}
-            </div>
-            <form action="/members/{{ user.user_id }}/status" method="post" style="display: flex; gap: 8px;">
-                <select name="new_status" style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
-                    <option value="active" {% if user.status == 'active' %}selected{% endif %}>활성</option>
-                    <option value="suspended" {% if user.status == 'suspended' %}selected{% endif %}>정지</option>
-                    <option value="withdrawn" {% if user.status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
-                </select>
-                <button type="submit" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">변경</button>
-            </form>
-        </div>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #fee2e2;">
-            <h3 style="margin: 0 0 0.75rem 0; color: #991b1b; font-size: 1rem;">회원 삭제</h3>
-            <p style="color: #6b7280; font-size: 0.85rem; margin: 0 0 1rem 0;">삭제된 회원은 복구할 수 없습니다.</p>
-            <form action="/members/{{ user.user_id }}/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
-                <button type="submit" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">회원 삭제</button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- 포인트 요약 -->
-<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">포인트 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(points.balance) }}P</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value" style="color: #059669;">{{ "{:,}".format(points.total_earned) }}P</div>
-    </div>
-    <div class="summary-card" style="flex: 1;">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value" style="color: #dc2626;">{{ "{:,}".format(points.total_spent) }}P</div>
-    </div>
-</div>
-
-<!-- 미션 현황 -->
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 1.5rem;">
-    <h3 style="margin: 0 0 1rem 0; color: #1e3a8a;">미션 현황 ({{ missions|length }}건)</h3>
-    {% if missions %}
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">미션명</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">유형</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: right;">보상 포인트</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">마감일</th>
-            </tr></thead>
-            <tbody>
-                {% for m in missions %}
-                <tr>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ m.mission_title }}</td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">
-                        <span style="background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ m.mission_type }}</span>
-                    </td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                        {% if m.status == 'completed' %}
-                            <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">완료</span>
-                        {% elif m.status == 'in_progress' %}
-                            <span style="background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">진행중</span>
-                        {% elif m.status == 'expired' %}
-                            <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">만료</span>
-                        {% else %}
-                            <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">대기</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(m.reward_points) }}P</td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">{{ m.due_date or '-' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p style="color: #9ca3af; text-align: center; padding: 1rem;">미션 내역이 없습니다.</p>
-    {% endif %}
-</div>
-
-<!-- 포인트 구매 내역 -->
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
-    <h3 style="margin: 0 0 1rem 0; color: #1e3a8a;">포인트 구매 내역 ({{ purchases|length }}건)</h3>
-    {% if purchases %}
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">상품명</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: right;">사용 포인트</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; text-align: center;">상태</th>
-                <th style="background: #f3f4f6; padding: 8px 12px; border-bottom: 2px solid #e5e7eb;">구매일</th>
-            </tr></thead>
-            <tbody>
-                {% for p in purchases %}
-                <tr>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">{{ p.product_name or '(삭제된 상품)' }}</td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">{{ "{:,}".format(p.point_cost) }}P</td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                        {% if p.status == 'completed' %}
-                            <span style="background: #ecfdf5; color: #059669; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">completed</span>
-                        {% elif p.status == 'cancelled' %}
-                            <span style="background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">cancelled</span>
-                        {% else %}
-                            <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">{{ p.status }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6;">{{ p.purchased_at }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p style="color: #9ca3af; text-align: center; padding: 1rem;">구매 내역이 없습니다.</p>
-    {% endif %}
-</div>
-{% endblock %}
-"""
-
-MEMBER_FORM_TEMPLATE = """
-{% extends "base.html" %}
-{% block content %}
-<h1>{{ '회원 정보 수정' if user else '신규 회원 등록' }}</h1>
-<a href="/members" style="color: #2563eb; text-decoration: none; font-weight: 600; margin-bottom: 1rem; display: inline-block;">목록으로 돌아가기</a>
-
-<div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; max-width: 600px;">
-    <form method="post">
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">회원 ID</label>
-            {% if user %}
-                <input type="text" value="{{ user.user_id }}" disabled style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; background: #f3f4f6; color: #6b7280;">
-            {% else %}
-                <input type="text" name="user_id" required placeholder="예: user_007" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            {% endif %}
-        </div>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">이름</label>
-            <input type="text" name="user_name" value="{{ user.user_name if user else '' }}" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 6px;">이메일</label>
-                <input type="email" name="email" value="{{ user.email if user else '' }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 6px;">전화번호</label>
-                <input type="text" name="phone" value="{{ user.phone if user else '' }}" placeholder="010-0000-0000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-            </div>
-        </div>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">가입일</label>
-            <input type="date" name="join_date" value="{{ user.join_date if user else '' }}" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box;">
-        </div>
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 6px;">메모</label>
-            <textarea name="memo" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; resize: vertical;">{{ user.memo if user and user.memo else '' }}</textarea>
-        </div>
-        <button type="submit" style="padding: 12px 32px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">저장</button>
-    </form>
-</div>
-{% endblock %}
-"""
-
-# ==========================================================================
 # [함수] 로그 테이블 생성기, 인증, 통계
 # ==========================================================================
-
-def generate_log_table():
-    return """
-    <div class="log-table-container">
-        <table>
-            <thead><tr>
-                <th style="width: 30%;">실행 시간</th><th style="width: 15%;">상태</th>
-                <th style="width: 15%;">건수</th><th style="width: 40%;">메시지</th>
-            </tr></thead>
-            <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td>{{ log.executed_at.strftime('%Y-%m-%d %H:%M:%S') if log.executed_at else '-' }}</td>
-                    <td><span class="status-badge {{ 'status-fail' if log.status == 'FAIL' else 'status-success' }}">{{ log.status }}</span></td>
-                    <td>{{ log.row_count }}</td>
-                    <td title="{{ log.error_message if log.error_message else '' }}">
-                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; color: #6b7280; font-size: 0.9em;">{{ log.error_message if log.error_message else '-' }}</div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="4" style="text-align: center; padding: 2rem; color: #9ca3af;">수집된 로그가 없습니다.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    """
 
 def login_required(f):
     @wraps(f)
@@ -1683,24 +2282,50 @@ def _render_dashboard(message=None, status=None):
         economy_logs = get_recent_logs(collector.engine, source='ECONOMIC_INDICATORS', limit=50)
         income_logs = get_recent_logs(collector.engine, source='KOSIS_INCOME_API', limit=50)
 
-        loan_last_run = loan_logs[0]['executed_at'].strftime('%Y-%m-%d %H:%M') if loan_logs and loan_logs[0].get('executed_at') else "-"
-        economy_last_run = economy_logs[0]['executed_at'].strftime('%Y-%m-%d %H:%M') if economy_logs and economy_logs[0].get('executed_at') else "-"
-        income_last_run = income_logs[0]['executed_at'].strftime('%Y-%m-%d %H:%M') if income_logs and income_logs[0].get('executed_at') else "-"
+        loan_last_run = loan_logs[0]['executed_at'] if loan_logs and loan_logs[0].get('executed_at') else None
+        economy_last_run = economy_logs[0]['executed_at'] if economy_logs and economy_logs[0].get('executed_at') else None
+        income_last_run = income_logs[0]['executed_at'] if income_logs and income_logs[0].get('executed_at') else None
 
-        return render_template_string(HTML_TEMPLATE,
+        # 최근 24시간 에러 로그 확인
+        recent_errors = 0
+        try:
+            with collector.engine.connect() as conn:
+                cutoff = datetime.now() - timedelta(hours=24)
+                recent_errors = conn.execute(
+                    text("SELECT COUNT(*) FROM collection_logs WHERE status = 'FAIL' AND executed_at >= :cutoff"),
+                    {'cutoff': cutoff}
+                ).scalar()
+        except Exception:
+            pass
+
+        # 시스템 상태 구성
+        collectors_active = 0
+        if stats.get('COLLECTOR_FSS_LOAN_ENABLED') == '1': collectors_active += 1
+        if stats.get('COLLECTOR_ECONOMIC_ENABLED') == '1': collectors_active += 1
+        if stats.get('COLLECTOR_KOSIS_INCOME_ENABLED') == '1': collectors_active += 1
+
+        system_status = {
+            'db': True,
+            'collectors_active': collectors_active,
+            'collectors_total': 3,
+            'now': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'recent_errors': recent_errors
+        }
+
+        return render_template('index.html',
             message=message, status=status,
-            loan_log_table=render_template_string(generate_log_table(), logs=loan_logs),
-            economy_log_table=render_template_string(generate_log_table(), logs=economy_logs),
-            income_log_table=render_template_string(generate_log_table(), logs=income_logs),
+            loan_logs=loan_logs, economy_logs=economy_logs, income_logs=income_logs,
             loan_last_run=loan_last_run, economy_last_run=economy_last_run, income_last_run=income_last_run,
-            auto_refresh=session.get('auto_refresh', True), stats=stats)
+            auto_refresh=session.get('auto_refresh', True), stats=stats,
+            system_status=system_status)
     except Exception as e:
-        empty_table = render_template_string(generate_log_table(), logs=[])
-        return render_template_string(HTML_TEMPLATE,
+        system_status_error = {'db': False, 'collectors_active': 0, 'collectors_total': 3, 'now': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'recent_errors': 0}
+        return render_template('index.html',
             message=message or f"시스템 오류: {e}", status=status or "error",
             loan_last_run="-", economy_last_run="-", income_last_run="-",
-            loan_log_table=empty_table, economy_log_table=empty_table, income_log_table=empty_table,
-            auto_refresh=session.get('auto_refresh', True), stats={})
+            loan_logs=[], economy_logs=[], income_logs=[],
+            auto_refresh=session.get('auto_refresh', True), stats={},
+            system_status=system_status_error)
 
 # ==========================================================================
 # [라우트] 인증
@@ -1716,7 +2341,7 @@ def login():
             return redirect(url_for('index'))
         else:
             flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-    return render_template_string(LOGIN_TEMPLATE)
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
@@ -1769,7 +2394,7 @@ def collection_management():
                 'last_count': last_log.get('row_count', 0),
             })
 
-        return render_template_string(COLLECTION_MGMT_TEMPLATE, sources=sources)
+        return render_template('collection_management.html', sources=sources)
     except Exception as e:
         flash(f"수집 관리 페이지 로드 실패: {e}", "error")
         return redirect(url_for('index'))
@@ -1872,7 +2497,7 @@ def credit_weights():
             'xai_threshold_job': float(configs.get('XAI_THRESHOLD_JOB', '0.1')),
             'xai_threshold_asset': float(configs.get('XAI_THRESHOLD_ASSET', '0.05')),
         }
-        return render_template_string(CREDIT_WEIGHTS_TEMPLATE, **template_vars)
+        return render_template('credit_weights.html', **template_vars)
     except Exception as e:
         flash(f"신용평가 설정 로드 실패: {e}", 'error')
         return redirect(url_for('index'))
@@ -1907,7 +2532,7 @@ def recommend_settings():
             flash("추천 설정이 저장되었습니다.", 'success')
             return redirect(url_for('recommend_settings'))
 
-        return render_template_string(RECOMMEND_SETTINGS_TEMPLATE,
+        return render_template('recommend_settings.html',
             max_count=int(configs.get('RECOMMEND_MAX_COUNT', '5')),
             sort_priority=configs.get('RECOMMEND_SORT_PRIORITY', 'rate'),
             fallback_mode=configs.get('RECOMMEND_FALLBACK_MODE', 'show_all'),
@@ -1934,7 +2559,7 @@ def products():
         visible_count = sum(1 for p in products_list if p.get('is_visible', 1) == 1)
         hidden_count = len(products_list) - visible_count
 
-        return render_template_string(PRODUCTS_TEMPLATE,
+        return render_template('products.html',
             products=products_list, total_count=len(products_list),
             visible_count=visible_count, hidden_count=hidden_count)
     except Exception as e:
@@ -2005,7 +2630,7 @@ def missions():
         except Exception:
             type_counts = {}
 
-        return render_template_string(MISSIONS_TEMPLATE,
+        return render_template('missions.html',
             missions=missions_list, total=total,
             pending=stats_dict.get('pending', 0),
             in_progress=stats_dict.get('in_progress', 0),
@@ -2027,7 +2652,7 @@ def mission_detail(mission_id):
             flash('미션을 찾을 수 없습니다.', 'error')
             return redirect(url_for('missions'))
         mission = df.iloc[0].to_dict()
-        return render_template_string(MISSION_DETAIL_TEMPLATE, mission=mission)
+        return render_template('mission_detail.html', mission=mission)
     except Exception as e:
         flash(f"미션 상세 로드 실패: {e}", 'error')
         return redirect(url_for('missions'))
@@ -2048,7 +2673,7 @@ def points():
         total_earned = int(df['total_earned'].sum()) if not df.empty else 0
         total_spent = int(df['total_spent'].sum()) if not df.empty else 0
 
-        return render_template_string(POINTS_TEMPLATE,
+        return render_template('points.html',
             users=users_list, user_count=len(users_list),
             total_balance=total_balance, total_earned=total_earned, total_spent=total_spent)
     except Exception as e:
@@ -2071,7 +2696,7 @@ def point_detail(user_id):
                              collector.engine, params={'uid': user_id})
         transactions = tx_df.to_dict(orient='records')
 
-        return render_template_string(POINT_DETAIL_TEMPLATE,
+        return render_template('point_detail.html',
             user_id=user_id, user=user, transactions=transactions)
     except Exception as e:
         flash(f"포인트 상세 로드 실패: {e}", 'error')
@@ -2149,7 +2774,7 @@ def point_products():
         active_count = sum(1 for p in products_list if p.get('is_active', 1) == 1)
         inactive_count = len(products_list) - active_count
 
-        return render_template_string(POINT_PRODUCTS_TEMPLATE,
+        return render_template('point_products.html',
             products=products_list, total_count=len(products_list),
             active_count=active_count, inactive_count=inactive_count)
     except Exception as e:
@@ -2179,7 +2804,7 @@ def point_product_add():
         except Exception as e:
             flash(f"상품 추가 실패: {e}", 'error')
 
-    return render_template_string(POINT_PRODUCT_FORM_TEMPLATE, product=None)
+    return render_template('point_product_form.html', product=None)
 
 @app.route('/point-products/purchases')
 @login_required
@@ -2196,7 +2821,7 @@ def point_purchases():
 
         total_points_used = int(df.loc[df['status'] == 'completed', 'point_cost'].sum()) if not df.empty else 0
 
-        return render_template_string(POINT_PURCHASES_TEMPLATE,
+        return render_template('point_purchases.html',
             purchases=purchases_list, total_purchases=len(purchases_list),
             total_points_used=total_points_used)
     except Exception as e:
@@ -2233,7 +2858,7 @@ def point_product_edit(product_id):
             flash('상품을 찾을 수 없습니다.', 'error')
             return redirect(url_for('point_products'))
         product = df.iloc[0].to_dict()
-        return render_template_string(POINT_PRODUCT_FORM_TEMPLATE, product=product)
+        return render_template('point_product_form.html', product=product)
     except Exception as e:
         flash(f"상품 수정 실패: {e}", 'error')
         return redirect(url_for('point_products'))
@@ -2291,7 +2916,7 @@ def members():
             active = conn.execute(text("SELECT COUNT(*) FROM users WHERE status = 'active'")).scalar()
             suspended = conn.execute(text("SELECT COUNT(*) FROM users WHERE status = 'suspended'")).scalar()
 
-        return render_template_string(MEMBERS_TEMPLATE,
+        return render_template('members.html',
             members=members_list, total_count=total,
             active_count=active, suspended_count=suspended,
             search_name=search_name, search_status=search_status)
@@ -2313,7 +2938,7 @@ def member_add():
                 ).fetchone()
                 if existing:
                     flash("이미 존재하는 회원 ID입니다.", 'error')
-                    return render_template_string(MEMBER_FORM_TEMPLATE, user=None)
+                    return render_template('member_form.html', user=None)
 
                 conn.execute(text("""
                     INSERT INTO users (user_id, user_name, email, phone, join_date, memo)
@@ -2332,7 +2957,7 @@ def member_add():
         except Exception as e:
             flash(f"회원 등록 실패: {e}", 'error')
 
-    return render_template_string(MEMBER_FORM_TEMPLATE, user=None)
+    return render_template('member_form.html', user=None)
 
 @app.route('/members/<user_id>')
 @login_required
@@ -2374,7 +2999,7 @@ def member_detail(user_id):
         """, collector.engine, params={'uid': user_id})
         purchases_list = purchases_df.to_dict(orient='records')
 
-        return render_template_string(MEMBER_DETAIL_TEMPLATE,
+        return render_template('member_detail.html',
             user=user, points=points, missions=missions_list, purchases=purchases_list)
     except Exception as e:
         flash(f"회원 상세 로드 실패: {e}", 'error')
@@ -2413,7 +3038,7 @@ def member_edit(user_id):
             columns = conn.execute(text("SELECT * FROM users LIMIT 0")).keys()
             user = dict(zip(columns, row))
 
-        return render_template_string(MEMBER_FORM_TEMPLATE, user=user)
+        return render_template('member_form.html', user=user)
     except Exception as e:
         flash(f"회원 수정 실패: {e}", 'error')
         return redirect(url_for('members'))
@@ -2453,6 +3078,37 @@ def member_delete(user_id):
     except Exception as e:
         flash(f"회원 삭제 실패: {e}", 'error')
     return redirect(url_for('members'))
+
+# ==========================================================================
+# [라우트] F9: 시스템 정보
+# ==========================================================================
+
+@app.route('/system-info')
+@login_required
+def system_info():
+    memory_mb = "N/A"
+    if psutil:
+        try:
+            process = psutil.Process(os.getpid())
+            memory_mb = round(process.memory_info().rss / 1024 / 1024, 2)
+        except Exception:
+            pass
+
+    sys_info = {
+        'os': f"{platform.system()} {platform.release()}",
+        'python_version': sys.version.split()[0],
+        'flask_version': flask_version,
+        'cwd': os.getcwd(),
+        'memory_mb': memory_mb
+    }
+    db_info = {'version': 'Unknown'}
+    try:
+        collector = DataCollector()
+        with collector.engine.connect() as conn:
+            db_info['version'] = conn.execute(text("SELECT VERSION()")).scalar()
+    except Exception:
+        pass
+    return render_template('system_info.html', sys_info=sys_info, db_info=db_info)
 
 # ==========================================================================
 # [라우트] 데이터 조회, 시뮬레이터 (기존 기능 유지)
@@ -2500,7 +3156,7 @@ def view_data(table_name):
         df = pd.read_sql(query, collector.engine, params=params)
         rows = df.values.tolist()
 
-        return render_template_string(DATA_VIEWER_TEMPLATE,
+        return render_template('data_viewer.html',
             table_name=table_name, columns=columns, rows=rows,
             page=page, total_pages=total_pages, total_count=total_count,
             sort_by=sort_by, order=order, search_col=search_col, search_val=search_val)
@@ -2529,16 +3185,70 @@ def simulator():
             recommendations = recommend_products(collector.engine, user_profile)
 
             if not recommendations.empty:
-                result_html = recommendations.to_html(classes='table', index=False, border=0)
-                result_html = result_html.replace('class="dataframe table"', 'style="width: 100%; border-collapse: collapse;"')
-                result_html = result_html.replace('<th>', '<th style="background-color: #eff6ff; color: #1e3a8a; padding: 10px; text-align: left;">')
-                result_html = result_html.replace('<td>', '<td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">')
+                # Manual HTML construction for better styling control using static/style.css classes
+                html_parts = ['<table class="w-full"><thead><tr>']
+                
+                # Column mapping for display names
+                col_map = {
+                    'bank_name': '은행',
+                    'product_name': '상품명',
+                    'estimated_rate': '예상 금리',
+                    'explanation': '추천 사유',
+                    'loan_limit': '한도',
+                    'loan_rate_min': '최저 금리',
+                    'loan_rate_max': '최고 금리'
+                }
+                
+                # Alignment classes
+                align_map = {
+                    'bank_name': 'text-center nowrap',
+                    'estimated_rate': 'text-right nowrap',
+                    'loan_limit': 'text-right nowrap',
+                    'loan_rate_min': 'text-right nowrap',
+                    'loan_rate_max': 'text-right nowrap'
+                }
+
+                # Header
+                for col in recommendations.columns:
+                    label = col_map.get(col, col)
+                    align = align_map.get(col, 'text-left')
+                    html_parts.append(f'<th class="{align} nowrap">{label}</th>')
+                html_parts.append('</tr></thead><tbody>')
+
+                # Body
+                for _, row in recommendations.iterrows():
+                    html_parts.append('<tr>')
+                    for col in recommendations.columns:
+                        val = row[col]
+                        align = align_map.get(col, 'text-left')
+                        
+                        # Value formatting
+                        if col == 'bank_name':
+                            cell_content = f'<span class="badge badge-info">{val}</span>'
+                        elif col == 'product_name':
+                            cell_content = f'<span class="font-bold">{val}</span>'
+                        elif col == 'estimated_rate':
+                            cell_content = f'<span class="text-primary font-bold text-lg">{val}%</span>'
+                        elif col == 'explanation':
+                            cell_content = f'<div class="text-sm text-sub text-truncate" title="{val}">{val}</div>'
+                        elif col in ['loan_rate_min', 'loan_rate_max']:
+                            cell_content = f'<span class="text-sub">{val}%</span>'
+                        elif col == 'loan_limit':
+                            cell_content = f'<span class="font-bold">{int(val):,}원</span>'
+                        else:
+                            cell_content = str(val)
+                            
+                        html_parts.append(f'<td class="{align}">{cell_content}</td>')
+                    html_parts.append('</tr>')
+                
+                html_parts.append('</tbody></table>')
+                result_html = "".join(html_parts)
             else:
-                result_html = "<p style='padding: 1rem; color: #dc2626;'>조건에 맞는 추천 상품이 없습니다.</p>"
+                result_html = '<p class="text-center text-danger p-4">조건에 맞는 추천 상품이 없습니다.</p>'
         except Exception as e:
             flash(f"시뮬레이션 오류: {e}", "error")
 
-    return render_template_string(SIMULATOR_TEMPLATE, result_html=result_html,
+    return render_template('simulator.html', result_html=result_html,
         income=income, amount=amount, job_score=job_score, asset_amount=asset_amount)
 
 # ==========================================================================

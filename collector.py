@@ -1,7 +1,10 @@
 import pandas as pd
 import requests
 import traceback
-import schedule
+try:
+    import schedule
+except ImportError:
+    schedule = None
 import time
 from datetime import datetime
 import os
@@ -184,8 +187,12 @@ if __name__ == "__main__":
         collector = DataCollector()
         collector.run_all()
 
-    schedule.every().day.at("09:00").do(job)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    if schedule:
+        schedule.every().day.at("09:00").do(job)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    else:
+        print("schedule 모듈이 설치되지 않아 스케줄러를 실행할 수 없습니다.")
+        # 테스트를 위해 1회 실행
+        job()

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>미션 상세</h1>
+<a href="/missions" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">미션 상세 정보입니다. 이 페이지는 읽기 전용이며, 미션 상태는 시스템에 의해 자동으로 관리됩니다.</div>
+
+<div class="card card-p">
+    <table class="w-full">
+        <tr><td class="font-bold text-sub w-150">Mission ID</td><td>{{ mission.mission_id }}</td></tr>
+        <tr><td class="font-bold text-sub">유저 ID</td><td>{{ mission.user_id }}</td></tr>
+        <tr><td class="font-bold text-sub">미션 제목</td><td class="font-bold">{{ mission.mission_title }}</td></tr>
+        <tr><td class="font-bold text-sub">미션 설명</td><td>{{ mission.mission_description or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">유형</td><td>{{ mission.mission_type }}</td></tr>
+        <tr><td class="font-bold text-sub">대출 목적</td><td>{{ mission.loan_purpose or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">상태</td><td>{{ mission.status }}</td></tr>
+        <tr><td class="font-bold text-sub">난이도</td><td>{{ mission.difficulty }}</td></tr>
+        <tr><td class="font-bold text-sub">보상 포인트</td><td>{{ mission.reward_points }}</td></tr>
+        <tr><td class="font-bold text-sub">마감일</td><td>{{ mission.due_date or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">완료일</td><td>{{ mission.completed_at or '-' }}</td></tr>
+        <tr><td class="font-bold text-sub">생성일</td><td>{{ mission.created_at }}</td></tr>
+    </table>
+</div>
+{% endblock %}

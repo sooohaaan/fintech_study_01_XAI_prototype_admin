@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>회원 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">사용자 관리</span>
+            <h3 class="font-bold text-sm">통합적인 사용자 뷰</h3>
+        </div>
+        <p class="text-sm text-sub">
+            사용자의 기본 정보뿐만 아니라, 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리합니다. 이는 개별 사용자에 대한 깊이 있는 이해를 돕고, 향후 <strong>개인화된 서비스</strong>를 제공하기 위한 기초 데이터가 됩니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">등록된 회원을 조회, 검색, 추가, 수정, 상태 변경할 수 있습니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">전체 회원</div>
+        <div class="summary-value">{{ total_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">활성 회원</div>
+        <div class="summary-value text-success">{{ active_count }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">정지 회원</div>
+        <div class="summary-value text-danger">{{ suspended_count }}</div>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+    <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
+        <input type="text" name="search_name" value="{{ search_name }}" placeholder="회원 이름으로 검색..." class="form-input w-auto min-w-150">
+        <select name="search_status" class="form-select w-auto">
+            <option value="">전체 상태</option>
+            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
+            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
+            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
+        </select>
+        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        {% if search_name or search_status %}
+        <a href="/members" class="nav-btn">초기화</a>
+        {% endif %}
+    </form>
+    <a href="/members/add" class="btn-accent" style="padding: 10px 20px; text-decoration: none;">회원 추가</a>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>회원 ID</th>
+            <th>이름</th>
+            <th>이메일</th>
+            <th>전화번호</th>
+            <th class="text-center">상태</th>
+            <th>가입일</th>
+            <th class="text-center">관리</th>
+        </tr></thead>
+        <tbody>
+            {% for u in members %}
+            <tr>
+                <td style="font-family: monospace;">{{ u.user_id }}</td>
+                <td class="font-bold">{{ u.user_name }}</td>
+                <td>{{ u.email or '-' }}</td>
+                <td>{{ u.phone or '-' }}</td>
+                <td class="text-center">
+                    {% if u.status == 'active' %}
+                        <span class="badge badge-success">활성</span>
+                    {% elif u.status == 'suspended' %}
+                        <span class="badge badge-danger">정지</span>
+                    {% else %}
+                        <span class="badge badge-neutral">탈퇴</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.join_date or '-' }}</td>
+                <td class="text-center">
+                    <a href="/members/{{ u.user_id }}" class="nav-btn" style="padding: 4px 12px; font-size: 0.8rem;">상세</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">등록된 회원이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

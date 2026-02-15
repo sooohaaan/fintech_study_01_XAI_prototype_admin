@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>대출 추천 알고리즘 설정</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">서비스 전략</span>
+            <h3 class="font-bold text-sm">추천 알고리즘의 유연성</h3>
+        </div>
+        <p class="text-sm text-sub">
+            단순히 금리가 낮은 상품만 추천하는 것이 정답은 아닙니다. 사용자의 상황(한도가 중요한지, 금리가 중요한지)에 따라 추천 전략을 유연하게 변경할 수 있어야 합니다. <br>이 페이지에서는 <strong>정렬 우선순위</strong>와 <strong>금리 민감도</strong> 등을 조정하여, AI가 어떤 기준으로 상품을 추천할지 서비스의 방향성을 결정합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">이 설정은 사용자에게 노출되는 대출 추천 목록의 정렬 방식, 표시 개수, 조건 미달 시 처리 방법을 제어합니다. 변경 사항은 저장 즉시 추천 API에 적용됩니다.</div>
+
+<form method="post">
+    <div class="card card-p mb-6">
+        <h3 class="card-title text-primary mt-0">추천 파라미터</h3>
+        <div class="grid-2">
+            <div>
+                <label class="form-label">최대 추천 수</label>
+                <input type="number" name="max_count" value="{{ max_count }}" min="1" max="20" class="form-input">
+                <p class="help-text">사용자에게 보여줄 최대 추천 상품 수입니다. 권장: 3~7개.</p>
+            </div>
+            <div>
+                <label class="form-label">정렬 우선순위</label>
+                <select name="sort_priority" class="form-select">
+                    <option value="rate" {% if sort_priority == 'rate' %}selected{% endif %}>예상 금리 낮은 순 (rate)</option>
+                    <option value="limit" {% if sort_priority == 'limit' %}selected{% endif %}>대출 한도 높은 순 (limit)</option>
+                </select>
+                <p class="help-text">"금리 낮은 순"은 이자 부담 최소화, "한도 높은 순"은 대출 가능 금액 최대화 방향입니다.</p>
+            </div>
+            <div>
+                <label class="form-label">Fallback 모드</label>
+                <select name="fallback_mode" class="form-select">
+                    <option value="show_all" {% if fallback_mode == 'show_all' %}selected{% endif %}>전체 상품 표시 (show_all)</option>
+                    <option value="show_none" {% if fallback_mode == 'show_none' %}selected{% endif %}>빈 결과 반환 (show_none)</option>
+                </select>
+                <p class="help-text">희망 대출 금액을 지원하는 상품이 없을 때의 처리 방식입니다.</p>
+            </div>
+            <div>
+                <label class="form-label">금리 스프레드 민감도</label>
+                <input type="number" step="0.1" name="rate_sensitivity" value="{{ rate_sensitivity }}" min="0.1" max="3.0" class="form-input">
+                <p class="help-text">1.0이 기본값입니다. 높을수록 신용 점수 차이에 따른 금리 차이가 커집니다.</p>
+            </div>
+        </div>
+    </div>
+    <button type="submit" title="변경 사항을 저장합니다." class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">설정 저장</button>
+</form>
+{% endblock %}

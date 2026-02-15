@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>포인트 상세 - {{ user_id }}</h1>
+<a href="/points" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.</div>
+
+<div class="summary-grid mb-6">
+    <div class="summary-card">
+        <div class="summary-label">현재 잔액</div>
+        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 지급</div>
+        <div class="summary-value text-success">{{ "{:,}".format(user.total_earned) }}</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">총 사용</div>
+        <div class="summary-value text-danger">{{ "{:,}".format(user.total_spent) }}</div>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <h3 class="card-title text-primary text-sm mb-3">거래 내역</h3>
+    <table class="w-full">
+        <thead><tr>
+            <th>ID</th>
+            <th class="text-right">금액</th>
+            <th>유형</th>
+            <th>사유</th>
+            <th>관리자</th>
+            <th>참조 ID</th>
+            <th>일시</th>
+        </tr></thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.transaction_id }}</td>
+                <td class="text-right font-bold {{ 'text-success' if t.amount > 0 else 'text-danger' }}">{{ '{:+,}'.format(t.amount) }}</td>
+                <td>
+                    {% if t.transaction_type == 'mission_reward' %}
+                        <span class="badge badge-success">mission_reward</span>
+                    {% elif t.transaction_type == 'purchase' %}
+                        <span class="badge badge-danger">purchase</span>
+                    {% elif t.transaction_type == 'manual' %}
+                        <span class="badge badge-info">manual</span>
+                    {% else %}
+                        <span class="badge badge-neutral">{{ t.transaction_type }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.reason or '-' }}</td>
+                <td>{{ t.admin_id or '-' }}</td>
+                <td>{{ t.reference_id or '-' }}</td>
+                <td>{{ t.created_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-sub p-4">거래 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

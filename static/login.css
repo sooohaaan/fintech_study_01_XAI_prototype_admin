@@ -1,0 +1,28 @@
+:root {
+    --primary: #E5AA70; --primary-hover: #D4955D;
+    --accent: #E5AA70;
+    --accent-hover: #D4955D;
+    --bg-page: #F8F9FA; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
+    --text-main: #000000; --text-sub: #4A5568;
+    --border: #E7E7E7;
+    --danger-fg: #dc2626;
+    --shadow-md: 0 3px 4px -1px rgba(0,0,0,0.1), 0 1px 3px -1px rgba(0,0,0,0.1);
+    --radius-card: 14px; --radius-btn: 12px;
+}
+html.dark {
+    --primary: #E5AA70; --primary-hover: #D4955D;
+    --accent: #E5AA70;
+    --accent-hover: #D4955D;
+    --bg-page: #121212; --bg-card: #1E1E1E; --bg-input: #2C2C2C;
+    --text-main: #FFFFFF; --text-sub: #A0A0A0;
+    --border: #4F4F4F;
+    --shadow-md: 0 3px 4px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2);
+}
+body { font-family: "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background-color: var(--bg-page); color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s; }
+.login-container { background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-md); width: 100%; max-width: 400px; border: 1px solid var(--border); transition: background-color 0.3s, border-color 0.3s; }
+h1 { color: var(--primary); text-align: center; margin-bottom: 2rem; font-size: 1.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-btn); box-sizing: border-box; background: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
+input:focus { border-color: var(--primary); outline: none; }
+button { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: var(--radius-btn); font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+button:hover { background-color: var(--primary-hover); }
+.error { color: var(--danger-fg); text-align: center; margin-top: 1rem; font-size: 0.9rem; }

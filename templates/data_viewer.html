@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>수집 데이터 조회: {{ table_name }}</h1>
+
+    <div class="card guide-card">
+        <div class="card-p">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="badge badge-info">데이터 접근성</span>
+                <h3 class="font-bold text-sm">원시 데이터(Raw Data) 조회</h3>
+            </div>
+            <p class="text-sm text-sub">
+                AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 있는 그대로 조회할 수 있습니다. 데이터가 어떻게 저장되고 관리되는지 직접 확인함으로써, 데이터 파이프라인의 <strong>신뢰성</strong>을 검증할 수 있습니다.
+            </p>
+        </div>
+    </div>
+
+    <div class="info-banner">수집된 원시 데이터를 테이블별로 조회합니다.</div>
+    <div class="mb-4 flex flex-wrap gap-2">
+        <a href="/data/raw_loan_products" class="nav-btn {{ 'active' if table_name == 'raw_loan_products' else '' }}">대출 상품</a>
+        <a href="/data/raw_economic_indicators" class="nav-btn {{ 'active' if table_name == 'raw_economic_indicators' else '' }}">경제 지표</a>
+        <a href="/data/raw_income_stats" class="nav-btn {{ 'active' if table_name == 'raw_income_stats' else '' }}">소득 통계</a>
+        <a href="/data/collection_logs" class="nav-btn {{ 'active' if table_name == 'collection_logs' else '' }}">수집 로그</a>
+        <a href="/data/missions" class="nav-btn {{ 'active' if table_name == 'missions' else '' }}">미션</a>
+        <a href="/data/user_points" class="nav-btn {{ 'active' if table_name == 'user_points' else '' }}">유저 포인트</a>
+        <a href="/data/point_transactions" class="nav-btn {{ 'active' if table_name == 'point_transactions' else '' }}">포인트 거래</a>
+        <a href="/data/point_products" class="nav-btn {{ 'active' if table_name == 'point_products' else '' }}">포인트 상품</a>
+        <a href="/data/point_purchases" class="nav-btn {{ 'active' if table_name == 'point_purchases' else '' }}">포인트 구매</a>
+        <a href="/data/users" class="nav-btn {{ 'active' if table_name == 'users' else '' }}">회원</a>
+    </div>
+    <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
+        <span class="font-semibold text-sub">검색:</span>
+        <select name="search_col" class="form-select w-auto">
+            {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
+        </select>
+        <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력" class="form-input flex-1 min-w-200">
+        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" class="nav-btn">초기화</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead><tr>
+                {% for col in columns %}
+                <th class="nowrap">
+                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit;">
+                        {{ col }} {% if sort_by == col %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                    </a>
+                </th>
+                {% endfor %}
+            </tr></thead>
+            <tbody>
+                {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% else %}<tr><td colspan="{{ columns|length }}" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="flex justify-between items-center mt-4">
+        {% if page > 1 %}<a href="{{ url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">이전</a>
+        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+        <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }} ({{ "{:,}".format(total_count) }}건)</span>
+        {% if page < total_pages %}<a href="{{ url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">다음</a>
+        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ '회원 정보 수정' if user else '신규 회원 등록' }}</h1>
+<a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">{{ '기존 회원 정보를 수정합니다.' if user else '신규 회원을 등록합니다.' }}</div>
+
+<div class="card card-p max-w-600">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">회원 ID</label>
+            {% if user %}
+                <input type="text" value="{{ user.user_id }}" disabled class="form-input bg-border-light text-sub">
+                <p class="help-text">회원 ID는 등록 후 변경할 수 없습니다.</p>
+            {% else %}
+                <input type="text" name="user_id" required placeholder="예: user_007" class="form-input">
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label class="form-label">이름</label>
+            <input type="text" name="user_name" value="{{ user.user_name if user else '' }}" required placeholder="예: 홍길동" class="form-input">
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">이메일</label>
+                <input type="email" name="email" value="{{ user.email if user else '' }}" placeholder="예: user@example.com" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">전화번호</label>
+                <input type="text" name="phone" value="{{ user.phone if user else '' }}" placeholder="010-0000-0000" class="form-input">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">가입일</label>
+            <input type="date" name="join_date" value="{{ user.join_date if user else '' }}" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">메모</label>
+            <textarea name="memo" rows="3" placeholder="관리자 메모" class="form-textarea">{{ user.memo if user and user.memo else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+    </form>
+</div>
+{% endblock %}

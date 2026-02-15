@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block head_meta %}
+    {% if auto_refresh %}
+    <meta http-equiv="refresh" content="30; url={{ url_for('index') }}">
+    {% endif %}
+{% endblock %}
+
+{% block header_actions %}
+    <a href="/toggle_refresh" class="nav-btn {{ 'active' if auto_refresh else '' }}" title="{{ '자동 새로고침 ON: 30초마다 대시보드가 자동 업데이트됩니다. 클릭하면 OFF로 전환합니다.' if auto_refresh else '자동 새로고침 OFF: 클릭하면 30초 간격 자동 업데이트를 켭니다.' }}">
+        {{ 'Auto Refresh: ON' if auto_refresh else 'Auto Refresh: OFF' }}
+    </a>
+{% endblock %}
+
+{% block content %}
+        <!-- Educational Guide Card -->
+        <div class="card guide-card">
+            <div class="card-p">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="badge badge-info">교육용 가이드</span>
+                    <h3 class="font-bold text-sm">대시보드의 역할</h3>
+                </div>
+                <p class="text-sm text-sub">
+                    이 대시보드는 <strong>TrustFin</strong> 서비스의 두뇌 역할을 하는 관리자 페이지의 메인 화면입니다. 금융 데이터 수집 현황, 시스템 상태, 그리고 핵심적인 신용 평가 가중치를 한눈에 파악할 수 있도록 설계되었습니다. <br>특히 <strong>'현재 신용 평가 가중치'</strong> 섹션은 AI가 어떤 기준으로 사용자를 평가하고 있는지 투명하게 보여주며, 이는 XAI(설명 가능한 AI)의 핵심 원칙인 <strong>투명성</strong>을 관리자 관점에서 구현한 것입니다.
+                </p>
+            </div>
+        </div>
+
+        <!-- System Status Bar -->
+        <div class="system-status-bar">
+            <a href="/data/raw_loan_products" class="status-item" title="데이터베이스 연결 상태입니다. 클릭하면 데이터 조회 페이지로 이동합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.db else 'dot-danger' }}"></span>
+                <span class="status-label">DB Connection</span>
+                <span class="status-value">{{ 'Connected' if system_status.db else 'Disconnected' }}</span>
+            </a>
+            <a href="/collection-management" class="status-item" title="활성화된 데이터 수집기 수 / 전체 수집기 수. 클릭하면 수집 관리 페이지로 이동합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.collectors_active == system_status.collectors_total else 'dot-warning' if system_status.collectors_active > 0 else 'dot-danger' }}"></span>
+                <span class="status-label">Collectors</span>
+                <span class="status-value">{{ system_status.collectors_active }}/{{ system_status.collectors_total }} Active</span>
+            </a>
+            <a href="/system-info" class="status-item" title="서버 현재 시간. 클릭하면 시스템 정보 페이지로 이동합니다.">
+                <span class="status-dot dot-info"></span>
+                <span class="status-label">System Time</span>
+                <span class="status-value">{{ system_status.now }}</span>
+            </a>
+            <a href="/data/collection_logs?search_col=status&search_val=FAIL" class="status-item" title="최근 24시간 내 발생한 수집 실패 로그 건수입니다. 클릭하면 실패 로그를 조회합니다.">
+                <span class="status-dot {{ 'dot-success' if system_status.recent_errors == 0 else 'dot-danger' }}"></span>
+                <span class="status-label">Recent Errors (24h)</span>
+                <span class="status-value">{{ 'None' if system_status.recent_errors == 0 else system_status.recent_errors ~ ' Found' }}</span>
+            </a>
+            <div class="spacer"></div>
+            <div class="status-item">
+                <span class="status-label">Version</span>
+                <span class="status-value version-text">v0.1.0 (Proto)</span>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card" title="금감원 API에서 수집된 대출 상품의 총 건수입니다.">
+                <div class="summary-label">대출 상품 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.loan_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다.">
+                <div class="summary-label">경제 지표 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.economy_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다.">
+                <div class="summary-label">소득 통계 수</div>
+                <div class="summary-value">{{ "{:,}".format(stats.income_count | default(0)) }}</div>
+            </div>
+            <div class="summary-card" title="모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다.">
+                <div class="summary-label">총 수집 로그</div>
+                <div class="summary-value">{{ "{:,}".format(stats.log_count | default(0)) }}</div>
+            </div>
+        </div>
+
+        <!-- 신용 평가 가중치 요약 -->
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3 class="card-title">현재 신용 평가 가중치</h3>
+                <a href="/credit-weights" class="nav-btn" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
+            </div>
+            <div class="card-p">
+                <p class="help-text mb-3">세 가중치의 합은 1.0이어야 합니다. 자세한 조정은 <strong>신용평가 설정</strong> 메뉴에서 할 수 있습니다.</p>
+                <div class="credit-weights-body">
+               <div class="weight-item">
+                   <div class="weight-label">소득 비중</div>
+                   <div class="weight-value text-primary" title="WEIGHT_INCOME: 유저의 연 소득이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_INCOME | default(0.5) }}</div>
+                </div>
+                <div class="weight-item middle">
+                    <div class="weight-label">고용 안정성</div>
+                    <div class="weight-value" style="color: #10b981;" title="WEIGHT_JOB_STABILITY: 고용 형태에 따른 안정성이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                </div>
+                <div class="weight-item">
+                    <div class="weight-label">자산 비중</div>
+                    <div class="weight-value" style="color: #f59e0b;" title="WEIGHT_ESTATE_ASSET: 보유 자산이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Card 1: Loan -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">금감원 대출상품</h3>
+                        <span class="last-run">최근 실행: {{ loan_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_FSS_LOAN_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="loan" class="refresh-btn" title="금감원 대출상품 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=loan_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+
+            <!-- Card 2: Economy -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">경제 지표</h3>
+                        <span class="last-run">최근 실행: {{ economy_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_ECONOMIC_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="economy" class="refresh-btn" title="경제 지표 데이터를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=economy_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+
+            <!-- Card 3: Income -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h3 class="card-title">통계청 소득정보</h3>
+                        <span class="last-run">최근 실행: {{ income_last_run | time_ago }}</span>
+                    </div>
+                    <div class="card-actions">
+                        <span class="{{ 'badge-on' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'badge-off' }}" title="{{ '수집 활성화: 자동 수집이 실행됩니다.' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else '수집 비활성화: 수집 관리 메뉴에서 변경하세요.' }}">
+                            {{ 'ON' if stats.COLLECTOR_KOSIS_INCOME_ENABLED|default('1') == '1' else 'OFF' }}
+                        </span>
+                        <form action="/trigger" method="post" style="margin:0;">
+                            <button type="submit" name="job" value="income" class="refresh-btn" title="통계청 소득정보를 지금 즉시 수동 수집합니다.">새로고침</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with logs=income_logs %}{% include 'components/log_table.html' %}{% endwith %}
+                </div>
+            </div>
+        </div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>시스템 정보</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">시스템 투명성</span>
+            <h3 class="font-bold text-sm">환경 및 인프라 모니터링</h3>
+        </div>
+        <p class="text-sm text-sub">
+            안정적인 서비스 운영을 위해 서버 리소스와 데이터베이스 연결 상태를 투명하게 공개합니다. 이는 시스템의 <strong>가용성(Availability)</strong>을 보장하고, 문제 발생 시 신속하게 대응하기 위한 기초 자료로 활용됩니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">서버 환경 및 애플리케이션 상태 정보를 확인합니다.</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">서버 환경</h3></div>
+        <div class="card-body" style="padding: 1.5rem;">
+            <table class="w-full">
+                <tr><th class="w-150">OS</th><td>{{ sys_info.os }}</td></tr>
+                <tr><th>Python Version</th><td>{{ sys_info.python_version }}</td></tr>
+                <tr><th>Flask Version</th><td>{{ sys_info.flask_version }}</td></tr>
+                <tr><th>Working Directory</th><td>{{ sys_info.cwd }}</td></tr>
+                <tr><th>Memory Usage</th><td>{{ sys_info.memory_mb }} MB</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">데이터베이스 정보</h3></div>
+        <div class="card-body" style="padding: 1.5rem;">
+            <table class="w-full">
+                <tr><th class="w-150">DB Type</th><td>MySQL (via SQLAlchemy)</td></tr>
+                <tr><th>DB Version</th><td>{{ db_info.version }}</td></tr>
+                <tr><th>Connection Status</th><td><span class="badge badge-success">Connected</span></td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ '상품 수정' if product else '상품 추가' }}</h1>
+<a href="/point-products" class="nav-btn mb-4">목록으로 돌아가기</a>
+<div class="info-banner">{{ '기존 상품 정보를 수정합니다.' if product else '새로운 포인트 상품을 등록합니다.' }}</div>
+
+<div class="card card-p max-w-600">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">상품명</label>
+            <input type="text" name="product_name" value="{{ product.product_name if product else '' }}" required placeholder="예: 스타벅스 아메리카노 쿠폰" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">상품 유형</label>
+            <select name="product_type" class="form-select">
+                <option value="coupon" {% if product and product.product_type == 'coupon' %}selected{% endif %}>coupon (쿠폰)</option>
+                <option value="gift_card" {% if product and product.product_type == 'gift_card' %}selected{% endif %}>gift_card (상품권)</option>
+                <option value="discount" {% if product and product.product_type == 'discount' %}selected{% endif %}>discount (할인)</option>
+                <option value="merchandise" {% if product and product.product_type == 'merchandise' %}selected{% endif %}>merchandise (상품)</option>
+                <option value="experience" {% if product and product.product_type == 'experience' %}selected{% endif %}>experience (이용권)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">설명</label>
+            <textarea name="description" rows="3" placeholder="상품 설명" class="form-textarea">{{ product.description if product else '' }}</textarea>
+        </div>
+        <div class="grid-2 mb-6">
+            <div>
+                <label class="form-label">포인트 가격</label>
+                <input type="number" name="point_cost" value="{{ product.point_cost if product else '' }}" min="1" required placeholder="예: 1000" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">재고 수량</label>
+                <input type="number" name="stock_quantity" value="{{ product.stock_quantity if product else '' }}" min="0" required placeholder="예: 100" class="form-input">
+            </div>
+        </div>
+        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+    </form>
+</div>
+{% endblock %}

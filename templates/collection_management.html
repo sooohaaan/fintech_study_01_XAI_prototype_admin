@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>금융 데이터 수집 관리</h1>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">설계 의도</span>
+            <h3 class="font-bold text-sm">데이터 수집의 투명성</h3>
+        </div>
+        <p class="text-sm text-sub">
+            신뢰할 수 있는 AI는 신뢰할 수 있는 데이터에서 시작됩니다. 이 페이지에서는 <strong>금융감독원(대출상품), 통계청(소득/경제지표)</strong> 등 공신력 있는 외부 기관의 데이터를 수집하는 파이프라인을 관리합니다. <br>각 데이터 소스별로 수집 상태를 모니터링하고 제어함으로써, AI 모델이 학습하고 추론하는 데이터의 <strong>최신성과 무결성</strong>을 보장합니다.
+        </p>
+    </div>
+</div>
+
+<div class="info-banner">데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 수동으로 즉시 수집할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 수동 수집 버튼도 비활성화됩니다.</div>
+
+<div class="dashboard-grid">
+    {% for src in sources %}
+    <div class="card card-p">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="card-title">{{ src.label }}</h3>
+            <span class="{{ 'badge-on' if src.enabled else 'badge-off' }}" title="{{ '수집 활성화 상태' if src.enabled else '수집 비활성화 상태' }}">
+                {{ 'ON' if src.enabled else 'OFF' }}
+            </span>
+        </div>
+        <div class="text-sm text-sub mb-4">
+            <div>최근 실행: {{ src.last_run }}</div>
+            <div>최근 상태: <span class="font-bold {{ 'text-success' if src.last_status == 'SUCCESS' else 'text-danger' if src.last_status == 'FAIL' else 'text-sub' }}">{{ src.last_status or '-' }}</span></div>
+            <div>수집 건수: {{ src.last_count }}</div>
+        </div>
+        <div class="flex gap-2">
+            <form action="/toggle_collector" method="post" class="flex-1">
+                <input type="hidden" name="source" value="{{ src.key }}">
+                <button type="submit" title="{{ '수집을 비활성화합니다.' if src.enabled else '수집을 활성화합니다.' }}" class="{{ 'btn-outline-danger' if src.enabled else 'btn-outline-success' }} w-full p-2">
+                    {{ '비활성화' if src.enabled else '활성화' }}
+                </button>
+            </form>
+            <form action="/trigger" method="post" class="flex-1">
+                <button type="submit" name="job" value="{{ src.trigger_val }}" title="지금 즉시 이 소스의 데이터를 수집합니다." class="refresh-btn w-full p-2"
+                    {{ 'disabled' if not src.enabled else '' }}>수동 수집</button>
+            </form>
+        </div>
+        {% if not src.enabled %}
+        <p class="help-text text-danger mt-2">수집이 비활성화되어 있습니다. 수동 수집을 실행하려면 먼저 활성화하세요.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
