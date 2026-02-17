@@ -37,7 +37,9 @@
             <label class="form-label">메모</label>
             <textarea name="memo" rows="3" placeholder="관리자 메모" class="form-textarea">{{ user.memo if user and user.memo else '' }}</textarea>
         </div>
-        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+        <div class="flex justify-end">
+            <button type="submit" class="btn-accent">저장</button>
+        </div>
     </form>
 </div>
 {% endblock %}

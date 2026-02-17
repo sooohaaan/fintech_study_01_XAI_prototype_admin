@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>미션 관리</h1>
+<div class="flex justify-between items-center mb-2">
+    <h1>미션 관리</h1>
+    <a href="/missions/deletion-logs" class="nav-btn">
+        🗑️ 삭제 로그 조회
+        {% if deleted_count > 0 %}
+        <span class="badge badge-danger" style="font-size: 0.75em; padding: 2px 6px;">{{ deleted_count }}</span>
+        {% endif %}
+    </a>
+</div>
 
 <div class="card guide-card">
     <div class="card-p">
@@ -24,16 +32,29 @@
     <div class="summary-card">
         <div class="summary-label">대기(pending)</div>
         <div class="summary-value text-sub">{{ pending }}</div>
+        <a href="{{ url_for('missions', status_filter='pending') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
     </div>
     <div class="summary-card">
         <div class="summary-label">진행(in_progress)</div>
         <div class="summary-value text-primary">{{ in_progress }}</div>
+        <a href="{{ url_for('missions', status_filter='in_progress') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
     </div>
     <div class="summary-card">
         <div class="summary-label">완료(completed)</div>
         <div class="summary-value text-success">{{ completed }}</div>
+        <a href="{{ url_for('missions', status_filter='completed') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
     </div>
     <div class="summary-card">
+        <div class="summary-label">만료(expired)</div>
+        <div class="summary-value text-danger">{{ expired }}</div>
+        <a href="{{ url_for('missions', status_filter='expired') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
+    </div>
+    <div class="summary-card">
+        <div class="summary-label">포기(given_up)</div>
+        <div class="summary-value text-sub">{{ given_up }}</div>
+        <a href="{{ url_for('missions', status_filter='given_up') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
+    </div>
+    <div class="summary-card" title="{{ type_completion_tooltip }}">
         <div class="summary-label">완료율</div>
         <div class="summary-value text-primary">{{ "%.1f" | format(completion_rate) }}%</div>
     </div>
@@ -42,14 +63,51 @@
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary text-sm mt-0">유형별 분포</h3>
     {% for type_name, count in type_counts.items() %}
+    {% set rate = type_rates.get(type_name, 0) %}
     <div class="flex items-center mb-2 gap-2">
-        <span style="width: 90px; font-size: 0.85rem; font-weight: 600;">{{ type_name }}</span>
-        <div style="flex: 1; background: var(--border-light); border-radius: 8px; height: 20px;">
-            <div style="background: var(--primary); height: 100%; border-radius: var(--radius-btn); width: {{ (count / total * 100) if total > 0 else 0 }}%; min-width: 2px;"></div>
+        <span style="width: 90px; font-size: 0.85rem; font-weight: 600; {{ 'color: var(--danger-fg);' if rate < 50 else '' }}" title="완료율: {{ '%.1f'|format(rate) }}%">{{ type_name }}</span>
+        <div class="progress-track" style="flex: 1;">
+            <div class="progress-fill" style="width: {{ (count / total * 100) if total > 0 else 0 }}%; {{ 'background-color: var(--danger-fg);' if rate < 50 else '' }}"></div>
         </div>
         <span style="width: 30px; text-align: right; font-size: 0.85rem;">{{ count }}</span>
     </div>
     {% endfor %}
+</div>
+
+<div class="card card-p mb-6">
+    <h3 class="card-title text-primary text-sm mt-0 mb-4">유형별 상태 상세</h3>
+    <div style="overflow-x: auto;">
+        <table class="w-full" style="font-size: 0.85rem;">
+            <thead>
+                <tr>
+                    <th style="background: transparent; padding-left: 4px;">유형</th>
+                    <th class="text-center" style="background: transparent;">대기</th>
+                    <th class="text-center" style="background: transparent;">진행</th>
+                    <th class="text-center" style="background: transparent;">완료</th>
+                    <th class="text-center" style="background: transparent;">만료</th>
+                    <th class="text-center" style="background: transparent;">포기</th>
+                    <th class="text-right" style="background: transparent;">완료율</th>
+                    <th class="text-right" style="background: transparent; padding-right: 4px;">합계</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for type_name in type_counts.keys() %}
+                {% set s_counts = type_status_counts.get(type_name, {}) %}
+                {% set rate = type_rates.get(type_name, 0) %}
+                <tr>
+                    <td class="font-bold" style="padding-left: 4px;">{{ type_name }}</td>
+                    <td class="text-center text-sub">{{ s_counts.get('pending', 0) }}</td>
+                    <td class="text-center text-primary">{{ s_counts.get('in_progress', 0) }}</td>
+                    <td class="text-center text-success">{{ s_counts.get('completed', 0) }}</td>
+                    <td class="text-center text-danger">{{ s_counts.get('expired', 0) }}</td>
+                    <td class="text-center text-muted">{{ s_counts.get('given_up', 0) }}</td>
+                    <td class="text-right font-bold {{ 'text-danger' if rate < 50 else 'text-primary' }}">{{ "%.1f"|format(rate) }}%</td>
+                    <td class="text-right font-bold" style="padding-right: 4px;">{{ type_counts.get(type_name, 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <form method="get" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
@@ -60,6 +118,7 @@
         <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>진행 (in_progress)</option>
         <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>완료 (completed)</option>
         <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료 (expired)</option>
+        <option value="given_up" {% if status_filter == 'given_up' %}selected{% endif %}>포기 (given_up)</option>
     </select>
     <select name="type_filter" class="form-select w-auto">
         <option value="">전체 유형</option>
@@ -69,28 +128,61 @@
         <option value="investment" {% if type_filter == 'investment' %}selected{% endif %}>investment (투자)</option>
         <option value="lifestyle" {% if type_filter == 'lifestyle' %}selected{% endif %}>lifestyle (생활 습관)</option>
     </select>
-    <button type="submit" class="btn-accent" style="padding: 8px 16px;">적용</button>
-    {% if status_filter or type_filter %}
+    <select name="difficulty_filter" class="form-select w-auto">
+        <option value="">전체 난이도</option>
+        <option value="easy" {% if difficulty_filter == 'easy' %}selected{% endif %}>easy (쉬움)</option>
+        <option value="medium" {% if difficulty_filter == 'medium' %}selected{% endif %}>medium (보통)</option>
+        <option value="hard" {% if difficulty_filter == 'hard' %}selected{% endif %}>hard (어려움)</option>
+    </select>
+    <button type="submit" class="btn-primary">적용</button>
+    {% if status_filter or type_filter or difficulty_filter %}
         <a href="/missions" class="nav-btn">초기화</a>
     {% endif %}
 </form>
 
-<div class="table-wrapper">
-    <table class="w-full">
-        <thead><tr>
+<form method="post" id="bulkForm">
+    <input type="hidden" name="change_reason" id="hidden_change_reason">
+    <input type="hidden" name="delete_reason" id="hidden_delete_reason">
+    <div class="flex justify-between items-center mb-2">
+        <div class="flex gap-2 items-center">
+            <select name="new_status" id="new_status_select" class="form-select py-1 h-8 text-sm w-auto">
+                <option value="">상태 변경...</option>
+                <option value="pending">pending</option>
+                <option value="in_progress">in_progress</option>
+                <option value="completed">completed</option>
+                <option value="expired">expired</option>
+                <option value="given_up">given_up</option>
+            </select>
+            <button type="button" onclick="openBulkUpdateModal()" class="btn-tonal btn-sm">일괄 변경</button>
+        </div>
+        <button type="button" onclick="openBulkDeleteModal()" class="btn-outline-danger btn-sm">선택 삭제</button>
+    </div>
+    <div class="table-wrapper">
+        <table class="w-full">
+            <thead><tr>
+                <th class="text-center" style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
             <th>ID</th>
             <th>유저</th>
             <th>미션 제목</th>
             <th>유형</th>
             <th>대출 목적</th>
             <th>상태</th>
-            <th>난이도</th>
-            <th>포인트</th>
+            <th>
+                <a href="{{ url_for('missions', sort_by='difficulty', order='desc' if sort_by == 'difficulty' and order == 'asc' else 'asc', status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter) }}" style="text-decoration: none; color: inherit;">
+                    난이도 {% if sort_by == 'difficulty' %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="{{ url_for('missions', sort_by='reward_points', order='asc' if sort_by == 'reward_points' and order == 'desc' else 'desc', status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter) }}" style="text-decoration: none; color: inherit;">
+                    포인트 {% if sort_by == 'reward_points' %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                </a>
+            </th>
             <th>마감일</th>
         </tr></thead>
         <tbody>
             {% for m in missions %}
             <tr>
+                <td class="text-center"><input type="checkbox" name="mission_ids" value="{{ m.mission_id }}"></td>
                 <td>{{ m.mission_id }}</td>
                 <td>{{ m.user_id }}</td>
                 <td class="font-bold">
@@ -105,6 +197,8 @@
                         <span class="badge badge-info">in_progress</span>
                     {% elif m.status == 'expired' %}
                         <span class="badge badge-danger">expired</span>
+                    {% elif m.status == 'given_up' %}
+                        <span class="badge badge-neutral">given_up</span>
                     {% else %}
                         <span class="badge badge-warning">pending</span>
                     {% endif %}
@@ -114,9 +208,105 @@
                 <td>{{ m.due_date or '-' }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="9" class="text-center text-sub p-4">미션이 없습니다.</td></tr>
+            <tr><td colspan="10" class="text-center text-sub p-4">미션이 없습니다.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+</form>
+
+<div class="flex justify-between items-center mt-4">
+    {% if page > 1 %}<a href="{{ url_for('missions', page=page-1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order) }}" class="nav-btn">이전</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="{{ url_for('missions', page=page+1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order) }}" class="nav-btn">다음</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
+</div>
+
+<!-- Bulk Update Modal -->
+<div id="bulkUpdateModal" class="modal-overlay hidden" onclick="if(event.target === this) closeBulkUpdateModal()">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>일괄 상태 변경</h3>
+            <button onclick="closeBulkUpdateModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="mb-4">선택한 미션의 상태를 <span id="modalStatusDisplay" class="font-bold text-primary"></span>(으)로 변경합니다.</p>
+            <div class="form-group">
+                <label class="form-label">변경 사유 (History 기록)</label>
+                <textarea id="modalReasonInput" class="form-textarea" rows="3" placeholder="예: 정책 변경으로 인한 일괄 처리"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeBulkUpdateModal()" class="btn-tonal">취소</button>
+                <button onclick="submitBulkUpdate()" class="btn-primary">변경 확정</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div id="bulkDeleteModal" class="modal-overlay hidden" onclick="if(event.target === this) closeBulkDeleteModal()">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 class="text-danger">일괄 삭제</h3>
+            <button onclick="closeBulkDeleteModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warn-banner mb-4">선택한 미션을 정말 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.</div>
+            <div class="form-group">
+                <label class="form-label">삭제 사유 (필수)</label>
+                <textarea id="modalDeleteReasonInput" class="form-textarea" rows="3" placeholder="예: 기간 만료 데이터 정리"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeBulkDeleteModal()" class="btn-tonal">취소</button>
+                <button onclick="submitBulkDelete()" class="btn-outline-danger">삭제 확정</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll(source) {
+    var checkboxes = document.getElementsByName('mission_ids');
+    for(var i=0, n=checkboxes.length;i<n;i++) {
+        checkboxes[i].checked = source.checked;
+    }
+}
+
+function openBulkUpdateModal() {
+    var statusSelect = document.getElementById('new_status_select');
+    var selectedStatus = statusSelect.value;
+    if (!selectedStatus) { alert('변경할 상태를 선택해주세요.'); return; }
+    var checkboxes = document.querySelectorAll('input[name="mission_ids"]:checked');
+    if (checkboxes.length === 0) { alert('변경할 미션을 선택해주세요.'); return; }
+    document.getElementById('modalStatusDisplay').textContent = selectedStatus;
+    document.getElementById('bulkUpdateModal').classList.remove('hidden');
+    document.getElementById('modalReasonInput').focus();
+}
+function closeBulkUpdateModal() { document.getElementById('bulkUpdateModal').classList.add('hidden'); }
+function submitBulkUpdate() {
+    var reason = document.getElementById('modalReasonInput').value;
+    if (!reason.trim()) { alert('변경 사유를 입력해주세요.'); return; }
+    document.getElementById('hidden_change_reason').value = reason;
+    var form = document.getElementById('bulkForm');
+    form.action = "/missions/bulk_update_status";
+    form.submit();
+}
+
+function openBulkDeleteModal() {
+    var checkboxes = document.querySelectorAll('input[name="mission_ids"]:checked');
+    if (checkboxes.length === 0) { alert('삭제할 미션을 선택해주세요.'); return; }
+    document.getElementById('bulkDeleteModal').classList.remove('hidden');
+    document.getElementById('modalDeleteReasonInput').focus();
+}
+function closeBulkDeleteModal() { document.getElementById('bulkDeleteModal').classList.add('hidden'); }
+function submitBulkDelete() {
+    var reason = document.getElementById('modalDeleteReasonInput').value;
+    if (!reason.trim()) { alert('삭제 사유를 입력해주세요.'); return; }
+    document.getElementById('hidden_delete_reason').value = reason;
+    var form = document.getElementById('bulkForm');
+    form.action = "/missions/bulk_delete";
+    form.submit();
+}
+</script>
 {% endblock %}

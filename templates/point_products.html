@@ -32,8 +32,8 @@
 </div>
 
 <div class="flex gap-2 mb-6">
-    <a href="/point-products/add" class="btn-accent" style="padding: 10px 20px; text-decoration: none;">상품 추가</a>
-    <a href="/point-products/purchases" class="nav-btn" style="padding: 10px 20px; font-size: 1rem;">구매 내역 조회</a>
+    <a href="/point-products/add" class="btn-accent">상품 추가</a>
+    <a href="/point-products/purchases" class="nav-btn">구매 내역 조회</a>
 </div>
 
 <div class="table-wrapper">
@@ -64,7 +64,7 @@
                 </td>
                 <td class="text-center">
                     <div class="flex gap-2 justify-center">
-                        <a href="/point-products/{{ p.product_id }}/edit" class="nav-btn" style="padding: 4px 12px; font-size: 0.8rem;">수정</a>
+                        <a href="/point-products/{{ p.product_id }}/edit" class="btn-tonal btn-sm">수정</a>
                         <form action="/point-products/{{ p.product_id }}/toggle" method="post" class="form-inline">
                             <button type="submit" class="{{ 'btn-outline-danger' if p.is_active == 1 else 'btn-outline-success' }}">
                                 {{ '비활성' if p.is_active == 1 else '활성' }}
@@ -78,5 +78,13 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="flex justify-between items-center mt-4">
+    {% if page > 1 %}<a href="{{ url_for('point_products', page=page-1) }}" class="nav-btn">이전</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="{{ url_for('point_products', page=page+1) }}" class="nav-btn">다음</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
 </div>
 {% endblock %}

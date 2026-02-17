@@ -6,52 +6,22 @@
     {% endif %}
 {% endblock %}
 
-{% block header_actions %}
-    <a href="/toggle_refresh" class="nav-btn {{ 'active' if auto_refresh else '' }}" title="{{ '자동 새로고침 ON: 30초마다 대시보드가 자동 업데이트됩니다. 클릭하면 OFF로 전환합니다.' if auto_refresh else '자동 새로고침 OFF: 클릭하면 30초 간격 자동 업데이트를 켭니다.' }}">
-        {{ 'Auto Refresh: ON' if auto_refresh else 'Auto Refresh: OFF' }}
-    </a>
-{% endblock %}
-
 {% block content %}
         <!-- Educational Guide Card -->
         <div class="card guide-card">
             <div class="card-p">
                 <div class="flex items-center gap-2 mb-2">
-                    <span class="badge badge-info">교육용 가이드</span>
-                    <h3 class="font-bold text-sm">대시보드의 역할</h3>
+                    <span class="badge badge-info">Dashboard Guide</span>
+                    <h3 class="font-bold text-sm">통합 관제 대시보드</h3>
                 </div>
-                <p class="text-sm text-sub">
-                    이 대시보드는 <strong>TrustFin</strong> 서비스의 두뇌 역할을 하는 관리자 페이지의 메인 화면입니다. 금융 데이터 수집 현황, 시스템 상태, 그리고 핵심적인 신용 평가 가중치를 한눈에 파악할 수 있도록 설계되었습니다. <br>특히 <strong>'현재 신용 평가 가중치'</strong> 섹션은 AI가 어떤 기준으로 사용자를 평가하고 있는지 투명하게 보여주며, 이는 XAI(설명 가능한 AI)의 핵심 원칙인 <strong>투명성</strong>을 관리자 관점에서 구현한 것입니다.
-                </p>
-            </div>
-        </div>
-
-        <!-- System Status Bar -->
-        <div class="system-status-bar">
-            <a href="/data/raw_loan_products" class="status-item" title="데이터베이스 연결 상태입니다. 클릭하면 데이터 조회 페이지로 이동합니다.">
-                <span class="status-dot {{ 'dot-success' if system_status.db else 'dot-danger' }}"></span>
-                <span class="status-label">DB Connection</span>
-                <span class="status-value">{{ 'Connected' if system_status.db else 'Disconnected' }}</span>
-            </a>
-            <a href="/collection-management" class="status-item" title="활성화된 데이터 수집기 수 / 전체 수집기 수. 클릭하면 수집 관리 페이지로 이동합니다.">
-                <span class="status-dot {{ 'dot-success' if system_status.collectors_active == system_status.collectors_total else 'dot-warning' if system_status.collectors_active > 0 else 'dot-danger' }}"></span>
-                <span class="status-label">Collectors</span>
-                <span class="status-value">{{ system_status.collectors_active }}/{{ system_status.collectors_total }} Active</span>
-            </a>
-            <a href="/system-info" class="status-item" title="서버 현재 시간. 클릭하면 시스템 정보 페이지로 이동합니다.">
-                <span class="status-dot dot-info"></span>
-                <span class="status-label">System Time</span>
-                <span class="status-value">{{ system_status.now }}</span>
-            </a>
-            <a href="/data/collection_logs?search_col=status&search_val=FAIL" class="status-item" title="최근 24시간 내 발생한 수집 실패 로그 건수입니다. 클릭하면 실패 로그를 조회합니다.">
-                <span class="status-dot {{ 'dot-success' if system_status.recent_errors == 0 else 'dot-danger' }}"></span>
-                <span class="status-label">Recent Errors (24h)</span>
-                <span class="status-value">{{ 'None' if system_status.recent_errors == 0 else system_status.recent_errors ~ ' Found' }}</span>
-            </a>
-            <div class="spacer"></div>
-            <div class="status-item">
-                <span class="status-label">Version</span>
-                <span class="status-value version-text">v0.1.0 (Proto)</span>
+                <div class="text-sm text-sub space-y-2">
+                    <p><strong>목적:</strong> 서비스의 전반적인 건강 상태(Health)와 핵심 지표를 한눈에 파악합니다.</p>
+                    <p><strong>기능:</strong>
+                        1. <strong>시스템 상태:</strong> DB 연결 및 수집기 활성 상태 모니터링.<br>
+                        2. <strong>데이터 요약:</strong> 수집된 금융 데이터의 총량 확인.<br>
+                        3. <strong>수집 로그:</strong> 각 데이터 소스별 최근 실행 결과(성공/실패) 및 에러 확인.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -74,30 +44,109 @@
             </div>
         </div>
 
-        <!-- 신용 평가 가중치 요약 -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h3 class="card-title">현재 신용 평가 가중치</h3>
-                <a href="/credit-weights" class="nav-btn" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
+        <div class="grid-2 mb-6">
+            <!-- 신용 평가 가중치 요약 -->
+            <div class="card h-fit">
+                <div class="card-header">
+                    <h3 class="card-title">현재 신용 평가 가중치</h3>
+                    <a href="/credit-weights" class="nav-btn" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
+                </div>
+                <div class="card-p">
+                    <p class="help-text mb-3">세 가중치의 합은 1.0이어야 합니다.</p>
+                    <div class="credit-weights-body">
+                       <div class="weight-item">
+                           <div class="weight-label">소득 비중</div>
+                           <div class="weight-value text-primary" title="WEIGHT_INCOME">{{ stats.WEIGHT_INCOME | default(0.5) }}</div>
+                        </div>
+                        <div class="weight-item middle">
+                            <div class="weight-label">고용 안정성</div>
+                            <div class="weight-value text-success" title="WEIGHT_JOB_STABILITY">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">자산 비중</div>
+                            <div class="weight-value text-warning" title="WEIGHT_ESTATE_ASSET">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-p">
-                <p class="help-text mb-3">세 가중치의 합은 1.0이어야 합니다. 자세한 조정은 <strong>신용평가 설정</strong> 메뉴에서 할 수 있습니다.</p>
-                <div class="credit-weights-body">
-               <div class="weight-item">
-                   <div class="weight-label">소득 비중</div>
-                   <div class="weight-value text-primary" title="WEIGHT_INCOME: 유저의 연 소득이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_INCOME | default(0.5) }}</div>
+
+            <!-- [New] 로그 상태 차트 -->
+            <div class="card h-fit">
+                <div class="card-header">
+                    <h3 class="card-title">최근 24시간 수집 상태</h3>
                 </div>
-                <div class="weight-item middle">
-                    <div class="weight-label">고용 안정성</div>
-                    <div class="weight-value" style="color: #10b981;" title="WEIGHT_JOB_STABILITY: 고용 형태에 따른 안정성이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                <div class="card-p flex items-center justify-center" style="min-height: 180px;">
+                    <div style="width: 140px; height: 140px; position: relative;">
+                        <canvas id="logStatusChart"></canvas>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.2;">Total</div>
+                            <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); line-height: 1;" id="cnt-total">0</div>
+                        </div>
+                    </div>
+                    <div class="ml-6">
+                        <div class="flex items-center gap-2 mb-1 cursor-pointer hover:opacity-75 transition" onclick="window.location.href='{{ url_for('index', status_filter='SUCCESS') }}'" title="Success 로그 필터링">
+                            <span class="status-dot dot-success"></span><span class="text-sm text-sub">Success</span><span class="font-bold ml-auto" id="cnt-success">0</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-1 cursor-pointer hover:opacity-75 transition" onclick="window.location.href='{{ url_for('index', status_filter='FAIL') }}'" title="Fail 로그 필터링">
+                            <span class="status-dot dot-danger"></span><span class="text-sm text-sub">Fail</span><span class="font-bold ml-auto" id="cnt-fail">0</span>
+                        </div>
+                        <div class="flex items-center gap-2 cursor-pointer hover:opacity-75 transition" onclick="window.location.href='{{ url_for('index', status_filter='SKIPPED') }}'" title="Skipped 로그 필터링">
+                            <span class="status-dot" style="background:#E5E7EB;"></span><span class="text-sm text-sub">Skipped</span><span class="font-bold ml-auto" id="cnt-skipped">0</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="weight-item">
-                    <div class="weight-label">자산 비중</div>
-                    <div class="weight-value" style="color: #f59e0b;" title="WEIGHT_ESTATE_ASSET: 보유 자산이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
-                </div>
-            </div>
             </div>
         </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const stats = {{ stats.log_stats_24h | tojson | default('{}') }};
+                let success = (stats['SUCCESS'] || 0) + (stats['SUCCESS (MOCK)'] || 0);
+                let fail = stats['FAIL'] || 0;
+                let skipped = stats['SKIPPED'] || 0;
+                
+                document.getElementById('cnt-success').textContent = success;
+                document.getElementById('cnt-fail').textContent = fail;
+                document.getElementById('cnt-skipped').textContent = skipped;
+                
+                const total = success + fail + skipped;
+                document.getElementById('cnt-total').textContent = total;
+
+                const ctx = document.getElementById('logStatusChart').getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Success', 'Fail', 'Skipped'],
+                        datasets: [{
+                            data: total === 0 ? [1] : [success, fail, skipped],
+                            backgroundColor: total === 0 ? ['#F3F4F6'] : ['#10B981', '#F43F5E', '#E5E7EB'],
+                            borderWidth: 0,
+                            hoverOffset: total === 0 ? 0 : 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { display: false }, tooltip: { enabled: total > 0 } },
+                        onClick: (e, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const labels = ['SUCCESS', 'FAIL', 'SKIPPED'];
+                                if (labels[index]) {
+                                    window.location.href = '/?status_filter=' + labels[index];
+                                }
+                            }
+                        },
+                        onHover: (event, chartElement) => {
+                            event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                        }
+                    }
+                });
+            });
+        </script>
 
         <div class="dashboard-grid">
             <!-- Card 1: Loan -->

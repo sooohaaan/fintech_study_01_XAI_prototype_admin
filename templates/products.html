@@ -31,6 +31,19 @@
     </div>
 </div>
 
+<div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+    <form method="get" class="flex gap-2 items-center flex-wrap">
+        <input type="text" name="search" value="{{ search }}" placeholder="은행 또는 상품명 검색..." class="form-input w-auto min-w-200">
+        <button type="submit" class="btn-accent">검색</button>
+        {% if search %}<a href="/products" class="nav-btn">초기화</a>{% endif %}
+    </form>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+    </div>
+</div>
+
 <div class="table-wrapper">
     <table class="w-full">
         <thead><tr>
@@ -72,5 +85,13 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="flex justify-between items-center mt-4">
+    {% if page > 1 %}<a href="{{ url_for('products', page=page-1, search=search) }}" class="nav-btn">이전</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="{{ url_for('products', page=page+1, search=search) }}" class="nav-btn">다음</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
 </div>
 {% endblock %}

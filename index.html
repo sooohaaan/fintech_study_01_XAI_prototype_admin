@@ -75,11 +75,11 @@
                 </div>
                 <div class="weight-item middle">
                     <div class="weight-label">고용 안정성</div>
-                    <div class="weight-value" style="color: #10b981;" title="WEIGHT_JOB_STABILITY: 고용 형태에 따른 안정성이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                    <div class="weight-value text-success" title="WEIGHT_JOB_STABILITY: 고용 형태에 따른 안정성이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
                 </div>
                 <div class="weight-item">
                     <div class="weight-label">자산 비중</div>
-                    <div class="weight-value" style="color: #f59e0b;" title="WEIGHT_ESTATE_ASSET: 보유 자산이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
+                    <div class="weight-value text-warning" title="WEIGHT_ESTATE_ASSET: 보유 자산이 신용 점수에 미치는 가중치">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
                 </div>
             </div>
         </div>

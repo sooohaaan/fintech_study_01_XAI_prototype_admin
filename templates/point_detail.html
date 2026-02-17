@@ -43,6 +43,8 @@
                         <span class="badge badge-danger">purchase</span>
                     {% elif t.transaction_type == 'manual' %}
                         <span class="badge badge-info">manual</span>
+                    {% elif t.transaction_type == 'expired' %}
+                        <span class="badge badge-neutral">expired</span>
                     {% else %}
                         <span class="badge badge-neutral">{{ t.transaction_type }}</span>
                     {% endif %}

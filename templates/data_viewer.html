@@ -26,6 +26,7 @@
         <a href="/data/point_products" class="nav-btn {{ 'active' if table_name == 'point_products' else '' }}">포인트 상품</a>
         <a href="/data/point_purchases" class="nav-btn {{ 'active' if table_name == 'point_purchases' else '' }}">포인트 구매</a>
         <a href="/data/users" class="nav-btn {{ 'active' if table_name == 'users' else '' }}">회원</a>
+        <a href="/data/notifications" class="nav-btn {{ 'active' if table_name == 'notifications' else '' }}">알림</a>
     </div>
     <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
         <span class="font-semibold text-sub">검색:</span>
@@ -33,7 +34,7 @@
             {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
         </select>
         <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력" class="form-input flex-1 min-w-200">
-        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        <button type="submit" class="btn-accent">검색</button>
         {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" class="nav-btn">초기화</a>{% endif %}
     </form>
     <div class="table-wrapper">
@@ -48,7 +49,18 @@
                 {% endfor %}
             </tr></thead>
             <tbody>
-                {% for row in rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% for row in rows %}
+                <tr>
+                    {% for col in columns %}
+                    <td>
+                        {% if col in ['status', 'type', 'transaction_type', 'product_type'] %}
+                            <span class="badge badge-neutral">{{ row[col] }}</span>
+                        {% else %}
+                            {{ row[col] }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
                 {% else %}<tr><td colspan="{{ columns|length }}" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>{% endfor %}
             </tbody>
         </table>

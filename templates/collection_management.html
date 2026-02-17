@@ -5,12 +5,17 @@
 <div class="card guide-card">
     <div class="card-p">
         <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">설계 의도</span>
-            <h3 class="font-bold text-sm">데이터 수집의 투명성</h3>
+            <span class="badge badge-info">Collection Guide</span>
+            <h3 class="font-bold text-sm">금융 데이터 수집 관리</h3>
         </div>
-        <p class="text-sm text-sub">
-            신뢰할 수 있는 AI는 신뢰할 수 있는 데이터에서 시작됩니다. 이 페이지에서는 <strong>금융감독원(대출상품), 통계청(소득/경제지표)</strong> 등 공신력 있는 외부 기관의 데이터를 수집하는 파이프라인을 관리합니다. <br>각 데이터 소스별로 수집 상태를 모니터링하고 제어함으로써, AI 모델이 학습하고 추론하는 데이터의 <strong>최신성과 무결성</strong>을 보장합니다.
-        </p>
+        <div class="text-sm text-sub space-y-2">
+            <p><strong>목적:</strong> 외부 기관(금감원, 통계청 등)의 데이터를 가져오는 파이프라인을 제어합니다.</p>
+            <p><strong>사용 방법:</strong>
+                1. <strong>토글 스위치:</strong> 각 수집기의 자동 실행 여부(ON/OFF)를 제어합니다.<br>
+                2. <strong>설정 폼:</strong> API 인증키, 수집 주기(매일/매월), 수집 기간을 설정하고 저장합니다.<br>
+                3. <strong>새로고침:</strong> '데이터 새로고침' 버튼으로 즉시 수집을 실행합니다.
+            </p>
+        </div>
     </div>
 </div>
 
@@ -19,14 +24,14 @@
 <div class="dashboard-grid">
     {% for src in sources %}
     <div class="card card-p">
-        <div class="flex justify-between items-start mb-6">
+        <div class="flex justify-between items-start mb-6 relative" style="z-index: 20;">
             <div>
                 <h3 class="card-title text-lg mb-1">{{ src.label }}</h3>
                 <p class="text-xs text-muted">{{ src.api_desc }}</p>
             </div>
             <form action="/toggle_collector" method="post" style="margin:0;">
                 <input type="hidden" name="source" value="{{ src.key }}">
-                <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}" style="z-index: 20; position: relative;">
+                <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
                     <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }}>
                     <span class="slider"></span>
                 </label>
@@ -34,14 +39,14 @@
         </div>
         
         <!-- Status Grid -->
-        <div class="grid-3 gap-4 mb-6 p-4 bg-soft rounded-xl border border-light">
+        <div class="grid-3 gap-4 mb-6 p-4 bg-soft rounded-lg border">
             <div class="flex flex-col gap-1">
                 <span class="text-xs text-muted font-medium uppercase tracking-wider">상태</span>
                 <div class="flex items-center gap-2">
                     <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">{{ src.last_status or '-' }}</span>
                     <form action="/trigger" method="post" class="inline-flex">
-                        <button type="submit" name="job" value="{{ src.trigger_val }}" title="데이터 새로고침" class="btn-icon p-1 hover:bg-white rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" {{ 'disabled' if not src.enabled else '' }} style="width: 24px; height: 24px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                        <button type="submit" name="job" value="{{ src.trigger_val }}" title="데이터 새로고침" class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" {{ 'disabled' if not src.enabled else '' }} style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                         </button>
                     </form>
                 </div>
@@ -59,13 +64,14 @@
         <!-- Configuration -->
         <form action="/collection-management/config" method="post" class="space-y-4">
             <div>
-                <label class="form-label text-xs uppercase text-muted mb-2">API Key</label>
+                <label class="form-label text-xs uppercase text-muted mb-2">API Key (인증키)</label>
                 <div class="relative">
-                    <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-soft pr-10 border-transparent focus:bg-white focus:border-primary transition-colors">
-                    <span onclick="togglePassword('input_{{ src.key }}', this)" class="absolute right-3 top-50p translate-y-50n cursor-pointer text-muted hover:text-primary transition-colors" title="키 보기/숨기기">
+                    <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-soft pr-10">
+                    <span onclick="togglePassword('input_{{ src.key }}', this)" class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" title="키 보기/숨기기">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </span>
                 </div>
+                <p class="help-text mt-1">해당 기관에서 발급받은 API Key가 있어야 데이터 수집이 가능합니다.</p>
             </div>
             
             <div class="grid-2 gap-4">
@@ -83,6 +89,7 @@
                         </label>
                         {% endfor %}
                     </div>
+                    <p class="help-text mt-1">데이터 갱신 빈도를 설정합니다.</p>
                 </div>
                 <div>
                     <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
@@ -108,19 +115,20 @@
                         </label>
                     </div>
                     <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" min="0" max="60" class="form-input text-sm w-full mt-2" style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+                    <p class="help-text mt-1">과거 데이터를 얼마나 가져올지 설정합니다. (0=전체)</p>
                 </div>
             </div>
 
             <div class="flex justify-end pt-2">
-                <button type="submit" class="nav-btn bg-white border border-border hover:bg-soft hover:border-primary text-sub hover:text-primary transition-all shadow-sm" style="padding: 8px 20px; font-size: 0.85rem;">
+                <button type="submit" class="btn-primary">
                     설정 저장
                 </button>
             </div>
         </form>
 
         {% if not src.enabled %}
-        <div class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-2xl pointer-events-none">
-            <div class="bg-white/90 px-4 py-2 rounded-lg shadow-sm border border-light text-danger font-bold text-sm">
+        <div class="card-disabled-overlay">
+            <div class="card-disabled-label">
                 수집 비활성화됨
             </div>
         </div>

@@ -34,7 +34,9 @@
                 <input type="number" name="stock_quantity" value="{{ product.stock_quantity if product else '' }}" min="0" required placeholder="예: 100" class="form-input">
             </div>
         </div>
-        <button type="submit" class="btn-accent" style="padding: 12px 32px; font-size: 1rem;">저장</button>
+        <div class="flex justify-end">
+            <button type="submit" class="btn-accent">저장</button>
+        </div>
     </form>
 </div>
 {% endblock %}

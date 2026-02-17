@@ -40,12 +40,12 @@
             <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
             <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
         </select>
-        <button type="submit" class="btn-accent" style="padding: 8px 16px;">검색</button>
+        <button type="submit" class="btn-accent">검색</button>
         {% if search_name or search_status %}
         <a href="/members" class="nav-btn">초기화</a>
         {% endif %}
     </form>
-    <a href="/members/add" class="btn-accent" style="padding: 10px 20px; text-decoration: none;">회원 추가</a>
+    <a href="/members/add" class="btn-accent">회원 추가</a>
 </div>
 
 <div class="table-wrapper">
@@ -77,7 +77,7 @@
                 </td>
                 <td>{{ u.join_date or '-' }}</td>
                 <td class="text-center">
-                    <a href="/members/{{ u.user_id }}" class="nav-btn" style="padding: 4px 12px; font-size: 0.8rem;">상세</a>
+                    <a href="/members/{{ u.user_id }}" class="btn-tonal btn-sm">상세</a>
                 </td>
             </tr>
             {% else %}

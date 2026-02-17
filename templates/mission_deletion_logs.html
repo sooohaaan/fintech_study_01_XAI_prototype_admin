@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>삭제된 미션 로그</h1>
+<a href="/missions" class="nav-btn mb-4">미션 목록으로 돌아가기</a>
+
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">Audit Log</span>
+            <h3 class="font-bold text-sm">삭제 이력 감사</h3>
+        </div>
+        <p class="text-sm text-sub">
+            삭제된 미션의 상세 정보와 삭제 사유를 조회합니다. 이는 데이터 복구 요청 대응이나 운영 감사를 위한 백업 데이터입니다.
+        </p>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <table class="w-full">
+        <thead><tr>
+            <th>Log ID</th>
+            <th>Mission ID</th>
+            <th>User ID</th>
+            <th>미션 제목</th>
+            <th>유형</th>
+            <th>삭제 전 상태</th>
+            <th>포인트</th>
+            <th>삭제 사유</th>
+            <th>삭제자</th>
+            <th>삭제 일시</th>
+        </tr></thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.log_id }}</td>
+                <td>{{ log.mission_id }}</td>
+                <td>{{ log.user_id }}</td>
+                <td class="font-bold">{{ log.mission_title }}</td>
+                <td><span class="badge badge-neutral">{{ log.mission_type }}</span></td>
+                <td>{{ log.status }}</td>
+                <td>{{ log.reward_points }}</td>
+                <td class="text-danger">{{ log.delete_reason }}</td>
+                <td>{{ log.admin_id }}</td>
+                <td>{{ log.deleted_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="10" class="text-center text-sub p-4">삭제 로그가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

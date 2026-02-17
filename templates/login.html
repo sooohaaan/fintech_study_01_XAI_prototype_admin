@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"><title>Login - TrustFin Admin</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}?v=16" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}" type="text/css">
     <script>
         (function() {
             var saved = localStorage.getItem('adminTheme');
@@ -17,10 +17,13 @@
 <body>
     <div class="login-container">
         <h1>관리자 로그인</h1>
-        <p class="text-center text-sub text-sm mb-6 mt-neg-1">관리자 계정으로만 접근 가능합니다. 계정 정보가 없으면 시스템 담당자에게 문의하세요.</p>
+        <p class="text-center text-sub text-sm mb-6">관리자 계정으로만 접근 가능합니다. 계정 정보가 없으면 시스템 담당자에게 문의하세요.</p>
         <form method="post">
-            <input type="text" name="username" placeholder="관리자 아이디 입력 (예: admin)" required>
-            <input type="password" name="password" placeholder="비밀번호 입력" required>
+            <input type="text" name="username" placeholder="관리자 아이디 입력 (예: admin)" aria-label="관리자 아이디" value="{{ saved_username or '' }}" required>
+            <input type="password" name="password" placeholder="비밀번호 입력" aria-label="비밀번호" required>
+            <div class="remember-me">
+                <label><input type="checkbox" name="remember_me" {% if saved_username %}checked{% endif %}> 아이디 저장</label>
+            </div>
             <button type="submit">로그인</button>
         </form>
         {% with messages = get_flashed_messages() %}

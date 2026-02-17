@@ -8,7 +8,7 @@
     <div class="card card-p">
         <div class="flex justify-between items-center mb-4">
             <h3 class="card-title text-primary mt-0">기본 정보</h3>
-            <a href="/members/{{ user.user_id }}/edit" class="nav-btn" style="padding: 6px 16px; font-size: 0.85rem;">수정</a>
+            <a href="/members/{{ user.user_id }}/edit" class="btn-tonal btn-sm">수정</a>
         </div>
         <table class="w-full">
             <tr><td class="font-bold text-sub w-120">회원 ID</td><td style="font-family: monospace;">{{ user.user_id }}</td></tr>
@@ -38,14 +38,14 @@
                     <option value="suspended" {% if user.status == 'suspended' %}selected{% endif %}>정지</option>
                     <option value="withdrawn" {% if user.status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
                 </select>
-                <button type="submit" class="btn-accent" style="padding: 8px 16px; background-color: var(--warning-fg);">변경</button>
+                <button type="submit" class="btn-tonal">변경</button>
             </form>
         </div>
         <div class="card card-p border-danger">
             <h3 class="card-title text-danger text-sm mt-0 mb-3">회원 삭제</h3>
             <div class="warn-banner">삭제된 회원은 복구할 수 없습니다.</div>
             <form action="/members/{{ user.user_id }}/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
-                <button type="submit" class="w-full btn-outline-danger" style="padding: 10px;">회원 삭제</button>
+                <button type="submit" class="w-full btn-outline-danger">회원 삭제</button>
             </form>
         </div>
     </div>

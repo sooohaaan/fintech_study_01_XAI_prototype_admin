@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>유저 스탯 수정</h1>
+<a href="/user-stats" class="nav-btn mb-4">목록으로 돌아가기</a>
+
+<div class="card card-p max-w-600">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label">User ID</label>
+            <input type="text" value="{{ stat.user_id }}" disabled class="form-input bg-border-light">
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">신용점수 (Credit Score)</label>
+                <input type="number" name="credit_score" value="{{ stat.credit_score }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">DSR (%)</label>
+                <input type="number" step="0.1" name="dsr" value="{{ stat.dsr }}" class="form-input">
+            </div>
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">카드 사용률 (%)</label>
+                <input type="number" step="0.1" name="card_usage_rate" value="{{ stat.card_usage_rate }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">연체 건수</label>
+                <input type="number" name="delinquency" value="{{ stat.delinquency }}" class="form-input">
+            </div>
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">고금리 대출 잔액</label>
+                <input type="number" name="high_interest_loan" value="{{ stat.high_interest_loan }}" class="form-input">
+            </div>
+            <div>
+                <label class="form-label">마이너스 통장 한도</label>
+                <input type="number" name="minus_limit" value="{{ stat.minus_limit }}" class="form-input">
+            </div>
+        </div>
+        <div class="grid-2 mb-4">
+            <div>
+                <label class="form-label">급여 이체 여부</label>
+                <select name="salary_transfer" class="form-select">
+                    <option value="0" {% if stat.salary_transfer == 0 %}selected{% endif %}>미설정 (0)</option>
+                    <option value="1" {% if stat.salary_transfer == 1 %}selected{% endif %}>설정 (1)</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">오픈뱅킹 연결</label>
+                <select name="open_banking" class="form-select">
+                    <option value="0" {% if stat.open_banking == 0 %}selected{% endif %}>미연결 (0)</option>
+                    <option value="1" {% if stat.open_banking == 1 %}selected{% endif %}>연결 (1)</option>
+                </select>
+            </div>
+        </div>
+        <div class="grid-2 mb-6">
+            <div>
+                <label class="form-label">신용점수 조회 이력</label>
+                <select name="checked_credit" class="form-select">
+                    <option value="0" {% if stat.checked_credit == 0 %}selected{% endif %}>없음 (0)</option>
+                    <option value="1" {% if stat.checked_credit == 1 %}selected{% endif %}>있음 (1)</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">멤버십 확인 이력</label>
+                <select name="checked_membership" class="form-select">
+                    <option value="0" {% if stat.checked_membership == 0 %}selected{% endif %}>없음 (0)</option>
+                    <option value="1" {% if stat.checked_membership == 1 %}selected{% endif %}>있음 (1)</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="btn-primary">저장</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

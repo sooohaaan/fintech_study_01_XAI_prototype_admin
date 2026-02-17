@@ -1,25 +1,56 @@
 <div class="log-table-container">
     <table class="w-full">
         <thead><tr>
-            <th class="th-w-30 text-left nowrap">실행 시간</th>
-            <th class="th-w-15 text-center nowrap">상태</th>
-            <th class="th-w-15 text-right nowrap">건수</th>
-            <th class="th-w-40 text-left nowrap">메시지</th>
+            <th scope="col" class="th-w-30 text-left nowrap">
+                <a href="{{ url_for('index', sort_by='executed_at', order='asc' if sort_by == 'executed_at' and order == 'desc' else 'desc', status_filter=status_filter) }}" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px;">
+                    실행 시간
+                    {% if sort_by == 'executed_at' %}
+                        <span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>
+                    {% endif %}
+                </a>
+            </th>
+            <th scope="col" class="th-w-10 text-center nowrap">레벨</th>
+            <th scope="col" class="th-w-15 text-center nowrap">
+                <a href="{{ url_for('index', sort_by=sort_by, order=order, status_filter='FAIL' if not status_filter else 'SUCCESS' if status_filter == 'FAIL' else '') }}" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; justify-content: center;" title="클릭하여 상태 필터 변경 (전체 -> 실패 -> 성공)">
+                    상태
+                    {% if status_filter %}
+                        <span class="badge {{ 'badge-danger' if status_filter == 'FAIL' else 'badge-success' }}" style="font-size: 0.6em; padding: 1px 4px;">{{ status_filter }}</span>
+                    {% else %}
+                        <span style="font-size: 0.7em; color: var(--text-muted);">ALL</span>
+                    {% endif %}
+                </a>
+            </th>
+            <th scope="col" class="th-w-15 text-right nowrap">
+                <a href="{{ url_for('index', sort_by='row_count', order='asc' if sort_by == 'row_count' and order == 'desc' else 'desc', status_filter=status_filter) }}" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; width: 100%; justify-content: flex-end;">
+                    건수
+                    {% if sort_by == 'row_count' %}
+                        <span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>
+                    {% endif %}
+                </a>
+            </th>
+            <th scope="col" class="th-w-30 text-left nowrap">메시지</th>
         </tr></thead>
         <tbody>
             {% for log in logs %}
             <tr>
                 <td class="text-sub text-left">{{ log.executed_at.strftime('%Y-%m-%d %H:%M:%S') if log.executed_at else '-' }}</td>
                 <td class="text-center">
+                    <span class="badge {{ 'badge-danger' if log.level == 'ERROR' else 'badge-warning' if log.level == 'WARNING' else 'badge-info' }}">{{ log.level or 'INFO' }}</span>
+                </td>
+                <td class="text-center">
                     <span class="badge {{ 'badge-danger' if log.status == 'FAIL' else 'badge-success' if log.status == 'SUCCESS' else 'badge-neutral' }}">{{ log.status }}</span>
                 </td>
                 <td class="text-right font-bold text-primary nowrap">{{ "{:,}".format(log.row_count) }}</td>
                 <td class="text-left" title="{{ log.error_message if log.error_message else '' }}">
-                    <div class="text-sub text-sm text-truncate">{{ log.error_message if log.error_message else '-' }}</div>
+                    <div class="text-sub text-sm text-truncate log-message-cell" 
+                         onclick="showLogMessage(this.getAttribute('data-msg'))" 
+                         data-msg="{{ log.error_message or '' }}">
+                        {{ log.error_message if log.error_message else '-' }}
+                    </div>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-center text-muted p-4">수집된 로그가 없습니다.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted p-4">수집된 로그가 없습니다.</td></tr>
             {% endfor %}
         </tbody>
     </table>

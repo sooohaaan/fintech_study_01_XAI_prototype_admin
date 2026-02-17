@@ -50,18 +50,34 @@ class DataCollector:
 
         raise ValueError("DB 연결 설정을 찾을 수 없습니다. (secrets.toml 또는 환경변수를 확인해주세요.)")
 
-    def _log_status(self, source, status, row_count=0, error_msg=None):
+    def _log_status(self, source, status, row_count=0, error_msg=None, level='INFO'):
         """수집 결과를 collection_logs 테이블에 기록"""
         log_data = {
             'target_source': source,
             'status': status,
             'row_count': row_count,
             'error_message': error_msg,
+            'level': level,
             'executed_at': datetime.now()
         }
         df = pd.DataFrame([log_data])
-        df.to_sql('collection_logs', self.engine, if_exists='append', index=False)
-        print(f"[{source}] {status} - Rows: {row_count}")
+        
+        try:
+            df.to_sql('collection_logs', self.engine, if_exists='append', index=False)
+        except Exception as e:
+            # 컬럼이 없을 경우 자동 추가 (Self-Repair)
+            if "Unknown column" in str(e) or "1054" in str(e):
+                try:
+                    with self.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE collection_logs ADD COLUMN level VARCHAR(20) DEFAULT 'INFO'"))
+                        conn.commit()
+                    df.to_sql('collection_logs', self.engine, if_exists='append', index=False)
+                except Exception:
+                    print(f"로그 저장 실패: {e}")
+            else:
+                print(f"로그 저장 실패: {e}")
+
+        print(f"[{source}] [{level}] {status} - Rows: {row_count}")
 
     def _replace_table(self, table_name, df):
         """기존 데이터를 삭제하고 새 데이터로 교체 (중복 적재 방지)
@@ -130,7 +146,7 @@ class DataCollector:
         """1. 금융감독원 API: 대출 상품 정보 수집"""
         source_name = "FSS_LOAN_API"
         if not self._is_source_enabled('COLLECTOR_FSS_LOAN_ENABLED'):
-            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin", level='WARNING')
             return
         try:
             api_key = self._get_config('API_KEY_FSS')
@@ -164,7 +180,7 @@ class DataCollector:
                 
         except Exception:
             error_msg = traceback.format_exc()
-            self._log_status(source_name, "FAIL", 0, error_msg)
+            self._log_status(source_name, "FAIL", 0, error_msg, level='ERROR')
 
     def _collect_fss_mock(self, source_name):
         """금융감독원 가상 데이터 수집"""
@@ -182,7 +198,7 @@ class DataCollector:
         """2. 통계청 API: 연령별/소득구간별 소득 통계 수집"""
         source_name = "KOSIS_INCOME_API"
         if not self._is_source_enabled('COLLECTOR_KOSIS_INCOME_ENABLED'):
-            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin", level='WARNING')
             return
         print(f"--- {source_name} 수집 시작 ---")
         try:
@@ -196,7 +212,7 @@ class DataCollector:
                 self._collect_kosis_mock(source_name)
         except Exception:
             error_msg = traceback.format_exc()
-            self._log_status(source_name, "FAIL", 0, error_msg)
+            self._log_status(source_name, "FAIL", 0, error_msg, level='ERROR')
 
     def _collect_kosis_mock(self, source_name):
         """통계청 가상 데이터 수집"""
@@ -214,7 +230,7 @@ class DataCollector:
         """3,4,5. 경제 지표 통합 수집 (부동산, 금리, 고용)"""
         source_name = "ECONOMIC_INDICATORS"
         if not self._is_source_enabled('COLLECTOR_ECONOMIC_ENABLED'):
-            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin")
+            self._log_status(source_name, "SKIPPED", 0, "Source disabled by admin", level='WARNING')
             return
         try:
             api_key = self._get_config('API_KEY_ECOS')
@@ -227,7 +243,7 @@ class DataCollector:
                 self._collect_economic_mock(source_name)
         except Exception:
             error_msg = traceback.format_exc()
-            self._log_status(source_name, "FAIL", 0, error_msg)
+            self._log_status(source_name, "FAIL", 0, error_msg, level='ERROR')
 
     def _collect_economic_mock(self, source_name):
         """경제지표 가상 데이터 수집"""
@@ -247,6 +263,174 @@ class DataCollector:
         self.collect_kosis_income_stats()
         self.collect_economic_indicators()
         print("=== 수집 파이프라인 종료 ===")
+
+    def process_expired_points(self):
+        """포인트 유효기간 만료 처리 (FIFO 방식)"""
+        print("--- 포인트 소멸 처리 시작 ---")
+        try:
+            with self.engine.connect() as conn:
+                # 1. 잔액이 있는 모든 유저 조회
+                users = conn.execute(text("SELECT user_id FROM user_points WHERE balance > 0")).fetchall()
+                
+                for (user_id,) in users:
+                    # 2. 해당 유저의 모든 트랜잭션 조회 (시간순)
+                    txs = conn.execute(text("""
+                        SELECT amount, expires_at 
+                        FROM point_transactions 
+                        WHERE user_id = :uid 
+                        ORDER BY created_at ASC
+                    """), {'uid': user_id}).fetchall()
+                    
+                    # 3. FIFO 로직으로 만료 대상 계산
+                    total_spent = 0
+                    earned_list = [] # (amount, expires_at)
+                    
+                    # 지출 총액과 획득 내역 분리
+                    for amt, exp in txs:
+                        if amt < 0:
+                            total_spent += abs(amt)
+                        else:
+                            earned_list.append({'amount': amt, 'expires_at': exp})
+                    
+                    expired_amount = 0
+                    now = datetime.now()
+                    
+                    for item in earned_list:
+                        if total_spent >= item['amount']:
+                            # 이미 사용된 포인트
+                            total_spent -= item['amount']
+                        else:
+                            # 아직 사용되지 않은 잔여 포인트
+                            remaining = item['amount'] - total_spent
+                            total_spent = 0 # 지출액 모두 소진
+                            
+                            # 유효기간이 있고, 현재 시간보다 과거라면 만료 처리
+                            if item['expires_at'] and item['expires_at'] < now:
+                                expired_amount += remaining
+                    
+                    # 4. 만료된 포인트가 있다면 차감 트랜잭션 생성
+                    if expired_amount > 0:
+                        conn.execute(text("""
+                            INSERT INTO point_transactions (user_id, amount, transaction_type, reason, admin_id)
+                            VALUES (:uid, :amt, 'expired', '유효기간 만료 소멸', 'system')
+                        """), {'uid': user_id, 'amt': -expired_amount})
+                        
+                        conn.execute(text("""
+                            UPDATE user_points 
+                            SET balance = balance - :amt 
+                            WHERE user_id = :uid
+                        """), {'uid': user_id, 'amt': expired_amount})
+                        
+                        print(f"[Expiration] User {user_id}: {expired_amount} points expired.")
+                
+                conn.commit()
+                print("--- 포인트 소멸 처리 완료 ---")
+        except Exception as e:
+            print(f"포인트 소멸 처리 중 오류: {e}")
+            traceback.print_exc()
+
+    def check_mission_progress(self):
+        """사용자 통계(user_stats) 기반 미션 자동 완료 처리"""
+        print("--- 미션 달성 여부 확인 시작 ---")
+        try:
+            with self.engine.connect() as conn:
+                # 1. 진행 중이거나 대기 중인 미션 중 추적 조건이 있는 것 조회
+                missions = conn.execute(text("""
+                    SELECT m.mission_id, m.user_id, m.mission_title, m.reward_points, 
+                           m.tracking_key, m.tracking_operator, m.tracking_value
+                    FROM missions m
+                    WHERE m.status IN ('pending', 'in_progress') 
+                      AND m.tracking_key IS NOT NULL
+                """)).fetchall()
+
+                for m in missions:
+                    mid, uid, title, reward, key, op, val = m
+                    
+                    # 2. 유저 스탯 조회 (매핑)
+                    db_col = key
+                    if key == 'cardUsageRate': db_col = 'card_usage_rate'
+                    elif key == 'salaryTransfer': db_col = 'salary_transfer'
+                    elif key == 'highInterestLoan': db_col = 'high_interest_loan'
+                    elif key == 'minusLimit': db_col = 'minus_limit'
+                    elif key == 'openBanking': db_col = 'open_banking'
+                    elif key == 'checkedCredit': db_col = 'checked_credit'
+                    elif key == 'checkedMembership': db_col = 'checked_membership'
+                    
+                    try:
+                        user_val = conn.execute(text(f"SELECT {db_col} FROM user_stats WHERE user_id = :uid"), {'uid': uid}).scalar()
+                    except Exception:
+                        continue
+                        
+                    if user_val is None:
+                        continue
+
+                    # 3. 조건 비교
+                    passed = False
+                    try:
+                        if op == 'eq': passed = (float(user_val) == float(val))
+                        elif op == 'gte': passed = (float(user_val) >= float(val))
+                        elif op == 'lte': passed = (float(user_val) <= float(val))
+                        elif op == 'gt': passed = (float(user_val) > float(val))
+                        elif op == 'lt': passed = (float(user_val) < float(val))
+                    except ValueError:
+                        pass
+
+                    if passed:
+                        print(f"[Mission] User {uid} completed '{title}'")
+                        
+                        # 상태 업데이트
+                        conn.execute(text("UPDATE missions SET status = 'completed', completed_at = NOW() WHERE mission_id = :mid"), {'mid': mid})
+                        
+                        # 포인트 지급
+                        if reward > 0:
+                            expires_at = datetime.now() + timedelta(days=365)
+                            conn.execute(text("""
+                                INSERT INTO point_transactions (user_id, amount, transaction_type, reason, admin_id, reference_id, expires_at)
+                                VALUES (:uid, :amt, 'mission_reward', :reason, 'system', :ref, :exp)
+                            """), {'uid': uid, 'amt': reward, 'reason': f"{title} 미션 자동 달성", 'ref': f"mission_{mid}", 'exp': expires_at})
+                            
+                            conn.execute(text("UPDATE user_points SET balance = balance + :amt, total_earned = total_earned + :amt WHERE user_id = :uid"), {'uid': uid, 'amt': reward})
+                            
+                        conn.execute(text("INSERT INTO notifications (user_id, message, type) VALUES (:uid, :msg, 'success')"), {'uid': uid, 'msg': f"축하합니다! '{title}' 미션을 달성하여 {reward}P를 받았습니다."})
+                
+                conn.commit()
+        except Exception as e:
+            print(f"미션 확인 중 오류: {e}")
+            traceback.print_exc()
+            
+    def check_mission_expiration(self):
+        """기한이 지난 미션을 expired 상태로 변경"""
+        print("--- 미션 기한 만료 확인 시작 ---")
+        try:
+            with self.engine.connect() as conn:
+                # 기한이 지났고(due_date < 오늘), 아직 진행중/대기중인 미션 조회 및 업데이트
+                result = conn.execute(text("""
+                    UPDATE missions 
+                    SET status = 'expired', updated_at = NOW()
+                    WHERE status IN ('pending', 'in_progress') 
+                      AND due_date < CURDATE()
+                """))
+                if result.rowcount > 0:
+                    print(f"[Mission] {result.rowcount} missions expired.")
+                    conn.commit()
+        except Exception as e:
+            print(f"미션 기한 확인 중 오류: {e}")
+            traceback.print_exc()
+            self._log_status("MISSION_EXPIRATION", "FAIL", 0, str(e), level='ERROR')
+            
+            # [New] 예외 발생 시 시스템 로그 및 관리자 알림 전송
+            try:
+                error_msg = traceback.format_exc()
+                self._log_status("MISSION_CHECK", "FAIL", 0, error_msg, level='ERROR')
+                
+                with self.engine.connect() as conn:
+                    conn.execute(text("""
+                        INSERT INTO notifications (user_id, message, type) 
+                        VALUES ('admin', :msg, 'error')
+                    """), {'msg': f"미션 확인 프로세스 오류: {str(e)}"})
+                    conn.commit()
+            except Exception as inner_e:
+                print(f"오류 알림 전송 실패: {inner_e}")
 
 if __name__ == "__main__":
     print("Data Collector Scheduler Started...")
