@@ -1,7 +1,7 @@
 :root {
     --primary: #E5AA70; --primary-hover: #D4955D;
     --on-primary: #000000;
-    --bg-page: #F8F9FA; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
+    --bg-page: #F3F3F3; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
     --text-main: #000000; --text-sub: #4A5568;
     --border: #8E8E8E;
     --danger-fg: #BA1A1A;
@@ -11,7 +11,7 @@
 html.dark {
     --primary: #E5AA70; --primary-hover: #D4955D;
     --on-primary: #000000;
-    --bg-page: #121212; --bg-card: #1E1E1E; --bg-input: #2C2C2C;
+    --bg-page: #121212; --bg-card: #1D1D1D; --bg-input: #1D1D1D;
     --text-main: #FFFFFF; --text-sub: #A0A0A0;
     --border: #4F4F4F;
     --shadow-md: 0px 2px 6px 2px rgba(0,0,0,0.15), 0px 1px 2px 0px rgba(0,0,0,0.3);

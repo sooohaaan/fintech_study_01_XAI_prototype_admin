@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import traceback
+import json
 try:
     import schedule
 except ImportError:
@@ -34,7 +35,7 @@ class DataCollector:
                     secrets = toml.load(secrets_path)
                     if "mysql" in secrets:
                         db_conf = secrets["mysql"]
-                        db_url = f"mysql+mysqlconnector://{db_conf['user']}:{db_conf['password']}@{db_conf['host']}:{db_conf['port']}/{db_conf['database']}"
+                        db_url = f"mysql+mysqlconnector://{db_conf['user']}:{db_conf['password']}@{db_conf['host']}:{db_conf['port']}/{db_conf['database']}?connect_timeout=5"
                         return create_engine(db_url)
         except Exception as e:
             print(f"secrets.toml 로드 실패: {e}")
@@ -45,7 +46,7 @@ class DataCollector:
             host = os.getenv("DB_HOST", "localhost")
             port = os.getenv("DB_PORT", "3306")
             database = os.getenv("DB_DATABASE", "fintech_db")
-            db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}"
+            db_url = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}?connect_timeout=5"
             return create_engine(db_url)
 
         raise ValueError("DB 연결 설정을 찾을 수 없습니다. (secrets.toml 또는 환경변수를 확인해주세요.)")
@@ -188,7 +189,11 @@ class DataCollector:
             {'bank_name': '우리은행', 'product_name': 'WON직장인대출', 'loan_rate_min': 3.5, 'loan_rate_max': 4.5, 'loan_limit': 100000000},
             {'bank_name': '카카오뱅크', 'product_name': '신용대출', 'loan_rate_min': 3.2, 'loan_rate_max': 5.0, 'loan_limit': 150000000},
             {'bank_name': '토스뱅크', 'product_name': '토스신용대출', 'loan_rate_min': 3.8, 'loan_rate_max': 6.5, 'loan_limit': 200000000},
-            {'bank_name': '신한은행', 'product_name': '쏠편한 직장인대출', 'loan_rate_min': 4.1, 'loan_rate_max': 5.2, 'loan_limit': 120000000}
+            {'bank_name': '신한은행', 'product_name': '쏠편한 직장인대출', 'loan_rate_min': 4.1, 'loan_rate_max': 5.2, 'loan_limit': 120000000},
+            {'bank_name': 'KB국민은행', 'product_name': 'KB 직장인든든 신용대출', 'loan_rate_min': 3.9, 'loan_rate_max': 5.5, 'loan_limit': 200000000},
+            {'bank_name': '하나은행', 'product_name': '하나원큐 신용대출', 'loan_rate_min': 4.0, 'loan_rate_max': 5.8, 'loan_limit': 150000000},
+            {'bank_name': 'NH농협은행', 'product_name': 'NH직장인대출V', 'loan_rate_min': 3.7, 'loan_rate_max': 4.9, 'loan_limit': 180000000},
+            {'bank_name': '케이뱅크', 'product_name': '신용대출 플러스', 'loan_rate_min': 4.5, 'loan_rate_max': 7.0, 'loan_limit': 100000000}
         ]
         df = pd.DataFrame(mock_data)
         self._replace_table('raw_loan_products', df)
@@ -255,6 +260,66 @@ class DataCollector:
         df = pd.DataFrame(indicators)
         self._replace_table('raw_economic_indicators', df)
         self._log_status(source_name, "SUCCESS (MOCK)", len(df))
+
+    def collect_custom_source(self, source_key, endpoint):
+        """커스텀 수집기 실행 (Generic JSON Collector)"""
+        try:
+            # 1. API Key 조회
+            with self.engine.connect() as conn:
+                row = conn.execute(text("SELECT api_key_config FROM collection_sources WHERE source_key = :k"), {'k': source_key}).fetchone()
+                api_key_config = row[0] if row else None
+            
+            api_key = None
+            if api_key_config:
+                api_key = self._get_config(api_key_config)
+            
+            print(f"[{source_key}] Fetching from {endpoint}...")
+            
+            # 2. 실제 요청 (프로토타입용 단순화)
+            if not endpoint or not endpoint.startswith('http'):
+                # URL이 유효하지 않으면 Mock 처리 (테스트 편의성)
+                self._log_status(source_key, "SUCCESS (MOCK)", 1, "Endpoint is not a valid URL, treated as mock success")
+                return True, None
+
+            params = {}
+            if api_key:
+                # 일반적인 공공데이터 포털 파라미터명 시도
+                params['auth'] = api_key
+                params['serviceKey'] = api_key
+                params['key'] = api_key
+
+            try:
+                response = requests.get(endpoint, params=params, timeout=10)
+                response.raise_for_status()
+                
+                # [New] JSON 데이터 파일 저장
+                try:
+                    data = response.json()
+                except ValueError:
+                    data = {"raw_text": response.text}
+
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                save_dir = os.path.join(base_dir, 'data', 'custom_sources')
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{source_key}_{timestamp}.json"
+                filepath = os.path.join(save_dir, filename)
+                
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+
+                self._log_status(source_key, "SUCCESS", 1, f"Data saved to {filename}")
+                return True, None
+            except Exception as req_e:
+                self._log_status(source_key, "FAIL", 0, str(req_e), level='ERROR')
+                return False, str(req_e)
+
+        except Exception as e:
+            error_msg = traceback.format_exc()
+            self._log_status(source_key, "FAIL", 0, error_msg, level='ERROR')
+            return False, str(e)
 
     def run_all(self):
         """모든 수집 작업 일괄 실행"""

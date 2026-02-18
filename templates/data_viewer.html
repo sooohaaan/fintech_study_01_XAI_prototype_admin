@@ -41,9 +41,16 @@
         <table class="w-full">
             <thead><tr>
                 {% for col in columns %}
-                <th class="nowrap">
-                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit;">
-                        {{ col }} {% if sort_by == col %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                <th class="nowrap {% if sort_by == col %}bg-soft{% endif %}">
+                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: flex-start; gap: 4px;">
+                        <span class="{% if sort_by == col %}text-primary font-bold{% endif %}">{{ col }}</span>
+                        {% if sort_by == col %}
+                            {% if order == 'asc' %}
+                                <svg style="width: 0.8rem; height: 0.8rem;" class="text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                            {% else %}
+                                <svg style="width: 0.8rem; height: 0.8rem;" class="text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            {% endif %}
+                        {% endif %}
                     </a>
                 </th>
                 {% endfor %}
@@ -55,6 +62,12 @@
                     <td>
                         {% if col in ['status', 'type', 'transaction_type', 'product_type'] %}
                             <span class="badge badge-neutral">{{ row[col] }}</span>
+                        {% elif col in ['message', 'error_message', 'description', 'memo', 'reason', 'api_desc'] and row[col] %}
+                            <div class="text-truncate" style="max-width: 300px; cursor: pointer; color: var(--text-main);" 
+                                 onclick="showLogMessage(this.getAttribute('data-msg'))" 
+                                 data-msg="{{ row[col] }}" title="클릭하여 전체 보기">
+                                {{ row[col] }}
+                            </div>
                         {% else %}
                             {{ row[col] }}
                         {% endif %}

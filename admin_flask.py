@@ -15,6 +15,10 @@ except ImportError:
 import threading
 import schedule
 import time
+import subprocess
+import atexit
+import uuid
+import json
 
 # Flask 앱 초기화
 # 정적 파일 경로를 절대 경로로 설정하여 실행 위치에 상관없이 찾을 수 있도록 함
@@ -76,6 +80,7 @@ with open(style_css_path, 'w', encoding='utf-8') as f:
 
     /* Surfaces & Backgrounds */
     --md-sys-color-background: #F8F9FA;
+    --md-sys-color-background-rgb: 248, 249, 250;
     --md-sys-color-on-background: var(--visionary-black);
     --md-sys-color-surface: var(--pure-white);
     --md-sys-color-on-surface: var(--visionary-black);
@@ -86,6 +91,16 @@ with open(style_css_path, 'w', encoding='utf-8') as f:
     --md-sys-color-outline: var(--evidence-grey);
     --md-sys-color-outline-variant: #CBD5E1;
 
+    /* ===== M3 Surface Tokens ===== */
+    --md-sys-color-surface-container-lowest: #FFFFFF;
+    --md-sys-color-surface-container-low: #F7F9FA;
+    --md-sys-color-surface-container: #F3F3F3;
+    --md-sys-color-surface-container-high: #EDEDED;
+    --md-sys-color-surface-container-highest: #E7E7E7;
+    --md-sys-color-inverse-surface: #313033;
+    --md-sys-color-inverse-surface-rgb: 31, 30, 51;
+    --md-sys-color-inverse-on-surface: #F4EFF4;
+
     /* ===== Compatibility Aliases ===== */
     --primary: var(--md-sys-color-primary);
     --primary-hover: var(--insight-gold-hover);
@@ -93,10 +108,10 @@ with open(style_css_path, 'w', encoding='utf-8') as f:
     --accent-hover: var(--insight-gold-hover);
     --text-primary-color: var(--md-sys-color-on-primary-container);
 
-    --bg-page: var(--md-sys-color-background);
-    --bg-card: var(--md-sys-color-surface);
-    --bg-soft: var(--md-sys-color-surface-variant);
-    --bg-input: var(--md-sys-color-surface);
+    --bg-page: var(--md-sys-color-surface-container);
+    --bg-card: var(--md-sys-color-surface-container-lowest);
+    --bg-soft: var(--md-sys-color-surface-container-high);
+    --bg-input: var(--md-sys-color-surface-container-lowest);
 
     --text-main: var(--md-sys-color-on-surface);
     --text-sub: var(--md-sys-color-on-surface-variant);
@@ -140,6 +155,7 @@ html.dark {
 
     /* Surfaces & Backgrounds */
     --md-sys-color-background: #121212;
+    --md-sys-color-background-rgb: 18, 18, 18;
     --md-sys-color-on-background: #E0E0E0;
     --md-sys-color-surface: #1E1E1E;
     --md-sys-color-on-surface: #E0E0E0;
@@ -150,16 +166,25 @@ html.dark {
     --md-sys-color-outline: #717171;
     --md-sys-color-outline-variant: #4A5568;
 
+    /* ===== M3 Surface Tokens (Dark) ===== */
+    --md-sys-color-surface-container-lowest: #0F0F0F;
+    --md-sys-color-surface-container-low: #1D1D1D;
+    --md-sys-color-surface-container: #212121;
+    --md-sys-color-surface-container-high: #2B2B2B;
+    --md-sys-color-surface-container-highest: #363636;
+    --md-sys-color-inverse-surface: #E6E1E5;
+    --md-sys-color-inverse-on-surface: #313033;
+
     /* Compatibility Aliases */
     --primary: var(--md-sys-color-primary);
     --primary-hover: #D4955D;
     --accent: var(--md-sys-color-primary);
     --text-primary-color: var(--md-sys-color-primary);
 
-    --bg-page: var(--md-sys-color-background);
-    --bg-card: var(--md-sys-color-surface);
-    --bg-soft: #2C2C2C;
-    --bg-input: #2C2C2C;
+    --bg-page: var(--md-sys-color-surface);
+    --bg-card: var(--md-sys-color-surface-container-low);
+    --bg-soft: var(--md-sys-color-surface-container);
+    --bg-input: var(--md-sys-color-surface-container-low);
 
     --text-main: #FFFFFF;
     --text-sub: #A0AEC0;
@@ -191,7 +216,7 @@ h1 { color: var(--text-main); font-size: 1.75rem; font-weight: 400; margin: 0 0 
 .app-container { display: flex; min-height: 100vh; }
 
 /* Sidebar */
-.sidebar { width: 280px; background: var(--bg-card); border-right: none; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; transition: transform 0.3s ease; padding-right: 12px; }
+.sidebar { width: 280px; background: var(--md-sys-color-surface-container-low); border-right: none; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; transition: transform 0.3s ease; padding-right: 12px; }
 /* The Precision Star: Highlight brand identity in header */
 .sidebar-header { padding: 1.5rem 1.5rem 1rem 1.5rem; display: flex; align-items: center; gap: 12px; }
 .sidebar-header h2 { font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0; }
@@ -207,7 +232,7 @@ h1 { color: var(--text-main); font-size: 1.75rem; font-weight: 400; margin: 0 0 
 .nav-item.active .nav-icon { opacity: 1; stroke: var(--md-sys-color-on-secondary-container); }
 
 .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-
+ 
 /* Main Content */
 .main-content { flex: 1; margin-left: 280px; padding: 2rem; max-width: 100%; box-sizing: border-box; transition: margin-left 0.3s ease; }
 .top-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1.5rem; height: 40px; gap: 1rem; }
@@ -231,15 +256,18 @@ h1 { color: var(--text-main); font-size: 1.75rem; font-weight: 400; margin: 0 0 
 
 /* === Dashboard & Cards === */
 .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
-.card { background: var(--bg-card); border-radius: var(--radius-card); box-shadow: none; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; transition: var(--transition); position: relative; }
-.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background-color: var(--bg-card); }
+.card { background: var(--bg-card); border-radius: var(--radius-card); box-shadow: none; border: 1px solid var(--border-light); overflow: hidden; display: flex; flex-direction: column; transition: var(--transition); position: relative; }
+.card.border-success { border-color: var(--success-fg); }
+.card.border-danger { border-color: var(--danger-fg); }
+.card:hover { 
+    background-color: var(--md-sys-color-surface-container-low);
+    border-color: var(--md-sys-color-outline-variant);
+}
+.card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background-color: transparent; }
 .card-title-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .card-title { font-size: 1rem; font-weight: 500; color: var(--text-main); margin: 0; }
 .last-run { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
 .card-actions { display: flex; align-items: center; gap: 8px; }
-.refresh-btn { padding: 6px 12px; background-color: transparent; color: var(--text-primary-color); border: 1px solid var(--text-primary-color); border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition); white-space: nowrap; }
-.refresh-btn:hover { background-color: var(--primary); color: var(--md-sys-color-on-primary); }
 .card-body { padding: 0; flex-grow: 1; display: flex; flex-direction: column; }
 .card-p { padding: 1.5rem; }
 
@@ -274,24 +302,25 @@ th.text-center, td.text-center { text-align: center; }
 
 /* === Summary & Banners === */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: var(--bg-card); padding: 1.5rem; border-radius: var(--radius-card); box-shadow: none; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: var(--transition); }
-.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.summary-value { font-size: 2rem; font-weight: 800; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
+.summary-card { background: var(--md-sys-color-surface-container); padding: 1.5rem; border-radius: var(--radius-card); box-shadow: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: var(--transition); }
+.summary-card:hover { 
+    box-shadow: var(--shadow-sm);
+}
+.summary-value { font-size: 2rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
 .summary-label { color: var(--text-sub); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .help-text { font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 0 0; line-height: 1.4; }
 .info-banner { background: var(--info-bg); border: 1px solid rgba(229, 170, 112, 0.3); border-radius: var(--radius-btn); padding: 1rem; color: var(--text-primary-color); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5; display: flex; gap: 12px; align-items: flex-start; }
 .warn-banner { background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-btn); padding: 1rem; color: var(--warning-fg); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5; }
 
 /* === Forms & Buttons === */
-input, select, textarea { background: transparent; color: var(--text-main); border: 1px solid var(--md-sys-color-outline); border-radius: 4px; transition: var(--transition); font-family: inherit; height: 56px; padding: 0 16px; }
+input, select, textarea { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--md-sys-color-outline); border-radius: 4px; transition: var(--transition); font-family: inherit; height: 56px; padding: 0 16px; }
 input:focus, select:focus, textarea:focus { border-color: var(--primary); border-width: 2px; outline: none; padding: 0 15px; }
-/* Button Base */
-.btn { display: inline-flex; align-items: center; justify-content: center; padding: 0 24px; height: 40px; border-radius: 20px; font-weight: 500; font-size: 0.875rem; letter-spacing: 0.1px; transition: var(--transition); text-decoration: none; border: none; cursor: pointer; white-space: nowrap; }
-button { display: inline-flex; align-items: center; justify-content: center; padding: 0 24px; height: 40px; border: none; border-radius: 20px; background-color: var(--primary); color: var(--md-sys-color-on-primary); font-weight: 500; cursor: pointer; transition: var(--transition); font-size: 0.875rem; letter-spacing: 0.1px; }
-button:hover, .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-button:disabled, button[disabled] { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
-button:disabled:hover, button[disabled]:hover { transform: none; box-shadow: none; background-color: var(--primary); }
-.btn-primary { background-color: var(--primary); color: var(--md-sys-color-on-primary); }
+/* --- M3 Button System --- */
+/* Base button styles (shared layout) */
+button, .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0 24px; height: 40px; border-radius: 20px; font-weight: 500; font-size: 0.875rem; letter-spacing: 0.1px; transition: var(--transition); text-decoration: none; border: none; cursor: pointer; white-space: nowrap; }
+button:disabled, .btn:disabled, button[disabled] { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+button:disabled:hover, .btn:disabled:hover, button[disabled]:hover { transform: none; box-shadow: none; }
+
 /* Slider (Range) */
 .btn-sm { height: 32px; padding: 0 16px; font-size: 0.8rem; }
 input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 44px; padding: 0; border: none; margin: 0; }
@@ -306,12 +335,18 @@ input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer;
 input[type=range]::-moz-range-thumb { height: 20px; width: 20px; border: none; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.1s, box-shadow 0.2s; }
 input[type=range]:focus::-moz-range-thumb { box-shadow: 0 0 0 8px rgba(229, 170, 112, 0.2); }
 input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(229, 170, 112, 0.1); }
-.btn-accent { background-color: var(--accent); color: var(--md-sys-color-on-primary); display: inline-flex; align-items: center; justify-content: center; padding: 0 24px; height: 40px; border-radius: 20px; font-weight: 500; font-size: 0.875rem; transition: var(--transition); text-decoration: none; border: none; cursor: pointer; }
+
+/* M3 Filled Button (Primary Action) */
+.btn-accent { background-color: var(--accent); color: var(--md-sys-color-on-primary); }
 .btn-accent:hover { background-color: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+/* M3 Tonal Button */
 .btn-tonal { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 .btn-tonal:hover { background-color: var(--md-sys-color-secondary); color: var(--md-sys-color-on-secondary); box-shadow: var(--shadow-sm); }
 .btn-icon { padding: 8px; background-color: transparent; color: var(--text-sub); border: 1px solid transparent; border-radius: 8px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; }
-.btn-icon:hover { background-color: var(--bg-card); color: var(--text-primary-color); box-shadow: var(--shadow-sm); }
+.btn-icon:hover { background-color: var(--bg-soft); color: var(--text-primary-color); }
+/* M3-style state layer for danger icon button */
+.btn-icon.text-danger:hover { background-color: var(--danger-bg); color: var(--danger-fg); }
 .btn-outline-danger { padding: 6px 14px; background: transparent; color: var(--danger-fg); border: 1px solid var(--danger-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
 .btn-outline-danger:hover { background: var(--danger-bg); }
 .btn-outline-success { padding: 6px 14px; background: transparent; color: var(--success-fg); border: 1px solid var(--success-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
@@ -325,22 +360,99 @@ input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); box-shadow: 0
 .form-input, .form-select, .form-textarea { width: 100%; box-sizing: border-box; }
 .form-textarea { resize: vertical; min-height: 100px; }
 
+/* [New] M3 Outlined Text Field Style */
+.m3-text-field {
+    position: relative;
+}
+.m3-text-field .form-input {
+    /* Override base padding for floating label */
+    padding: 24px 16px 8px 16px;
+}
+.m3-text-field .form-label {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    padding: 0 4px;
+    margin: 0;
+    transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0);
+    pointer-events: none;
+    font-size: 1rem;
+    font-weight: 400;
+    display: inline-block; /* Override base 'form-label' */
+}
+/* Floating label state */
+.m3-text-field .form-input:focus ~ .form-label,
+.m3-text-field .form-input:not(:placeholder-shown) ~ .form-label {
+    top: 0;
+    transform: translateY(-50%) scale(0.75);
+    left: 12px;
+    background-color: var(--bg-soft); /* Notch effect */
+}
+.m3-text-field .form-input:focus ~ .form-label {
+    color: var(--primary);
+}
+.m3-text-field .form-input.border-danger ~ .form-label {
+    color: var(--md-sys-color-error);
+}
+/* For password toggle icon */
+.m3-text-field .password-toggle-icon {
+    position: absolute;
+    right: 16px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; color: var(--text-muted); z-index: 1;
+}
+
 /* Radio Chips */
 .radio-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .radio-chip { position: relative; }
 .radio-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
-.radio-chip span { display: inline-block; padding: 6px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 20px; font-size: 0.8rem; color: var(--text-sub); cursor: pointer; transition: all 0.2s; }
-.radio-chip input:checked + span { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
-.radio-chip span:hover { border-color: var(--primary); }
+.radio-chip span { 
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 32px; box-sizing: border-box;
+    padding: 0 16px; 
+    background: transparent; 
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    font-size: 0.875rem; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); 
+    cursor: pointer; 
+    transition: var(--transition); 
+}
+.radio-chip span:hover { background-color: var(--md-sys-color-surface-container-low); }
+.radio-chip input:checked + span { 
+    background: var(--md-sys-color-secondary-container); 
+    color: var(--md-sys-color-on-secondary-container); 
+    border-color: transparent;
+}
+.radio-chip input:checked + span::before {
+    content: ''; display: block; width: 18px; height: 18px; margin-left: -8px;
+    background-color: var(--md-sys-color-on-secondary-container);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E");
+}
 
 /* Toggle Switch */
 .toggle-switch { position: relative; display: inline-block; width: 52px; height: 32px; vertical-align: middle; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--md-sys-color-surface-variant); border: 2px solid var(--md-sys-color-outline); border-radius: 100px; transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0); }
-.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 8px; bottom: 8px; background-color: var(--md-sys-color-outline); border-radius: 50%; transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0); }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--md-sys-color-surface-container-highest); border: 2px solid var(--md-sys-color-outline); border-radius: 100px; transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0); }
+.slider:before { 
+    position: absolute; 
+    content: ""; 
+    height: 16px; 
+    width: 16px; 
+    left: 8px; 
+    bottom: 8px; 
+    background-color: var(--md-sys-color-outline); 
+    border-radius: 50%; 
+    transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0);
+    -webkit-mask-size: contain; mask-size: contain;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+}
 /* Checked State (M3) */
 input:checked + .slider { background-color: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); }
-input:checked + .slider:before { transform: translateX(12px); width: 24px; height: 24px; bottom: 4px; background-color: var(--md-sys-color-on-primary); }
+input:checked + .slider:before { transform: translateX(12px); width: 24px; height: 24px; bottom: 4px; background-color: var(--md-sys-color-on-primary); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E"); }
 /* Hover State */
 .toggle-switch:hover .slider:before { background-color: var(--md-sys-color-on-surface-variant); }
 input:checked:hover + .slider:before { background-color: var(--md-sys-color-primary-container); }
@@ -469,6 +581,7 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 .grid-auto-fit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
 .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
 .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
 
@@ -476,19 +589,19 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 .credit-weights-body { display: flex; justify-content: space-around; align-items: center; padding: 1rem 0; }
 .weight-item { text-align: center; flex: 1; }
 .weight-item.middle { border-left: 1px solid var(--border-light); border-right: 1px solid var(--border-light); }
-.weight-label { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
-.weight-value { font-size: 1.5rem; font-weight: 800; }
+.weight-label { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.weight-value { font-size: 1.5rem; font-weight: 700; }
 
 /* Guide Card */
 /* The Precision Star: Highlight core message with accent color border */
-.guide-card { border: 1px solid var(--border); border-left: 4px solid var(--primary); background: var(--bg-card); margin-bottom: 2rem; box-shadow: none; border-radius: var(--radius-card); }
+.guide-card { border: 1px solid var(--md-sys-color-primary-container); border-left: 4px solid var(--primary); background: var(--md-sys-color-surface-container-low); margin-bottom: 2rem; box-shadow: none; border-radius: var(--radius-card); }
 
 /* Card Disabled Overlay (M3: state layer for disabled containers) */
 .card-disabled-overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background-color: var(--bg-page); opacity: 0.75; border-radius: var(--radius-card); cursor: not-allowed; pointer-events: auto; }
 .card-disabled-label { padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg-card); color: var(--danger-fg); font-weight: 600; font-size: 0.85rem; opacity: 1; box-shadow: var(--shadow-sm); }
 /* Prevent card hover transform from breaking overlay stacking context */
-.card:has(.card-disabled-overlay) { pointer-events: none; }
-.card:has(.card-disabled-overlay):hover { transform: none; box-shadow: none; }
+.card:has(.card-disabled-overlay) { pointer-events: none; } 
+.card:has(.card-disabled-overlay):hover { transform: none; box-shadow: none; background-color: var(--bg-card); border-color: var(--border-light); }
 .card .card-disabled-overlay { pointer-events: auto; }
 /* Toggle switch above overlay */
 .card .toggle-switch { position: relative; z-index: 20; pointer-events: auto; }
@@ -497,14 +610,14 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     .sidebar.active { transform: translateX(0); box-shadow: 4px 0 16px rgba(0,0,0,0.1); }
-    .main-content { margin-left: 0; padding: 1rem; }
+    .main-content { margin-left: 0; padding: 1.5rem; }
     .mobile-header { display: flex; }
     .top-bar { display: none; }
     .overlay.active { display: block; }
     body.sidebar-open { overflow: hidden; }
 
     /* Grid & Flex Adjustments */
-    .grid-2, .grid-3, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr !important; }
+    .grid-2, .grid-3, .grid-4, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr !important; }
     .system-status-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
     .status-item { width: 100%; justify-content: space-between; }
     .spacer { display: none; }
@@ -520,7 +633,7 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 /* === Modal & Logs === */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.hidden { display: none; }
-.modal-content { background: var(--bg-card); width: 90%; max-width: 800px; max-height: 80vh; border-radius: var(--radius-dialog); box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); animation: modalFadeIn 0.2s ease-out; }
+.modal-content { background: var(--md-sys-color-surface-container-high); width: 90%; max-width: 800px; max-height: 80vh; border-radius: var(--radius-dialog); box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); animation: modalFadeIn 0.2s ease-out; }
 @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 .modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
 .modal-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
@@ -536,19 +649,20 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
     position: sticky;
     top: 0;
     z-index: 30;
-    margin: -2rem -2rem 2rem -2rem; /* Pull to viewport edges */
-    padding: 0.75rem 2rem; /* Restore alignment with content */
+    margin: -2rem -2rem 1.5rem -2rem; /* Pull to viewport edges */
+    padding: 0.75rem 2rem; /* Restore alignment */
     border-radius: 0;
     border: none;
     border-bottom: 1px solid var(--border-light);
-    background: rgba(255, 255, 255, 0.90);
+    background: rgba(var(--md-sys-color-background-rgb), 0.8);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     display: flex;
     align-items: center;
 }
 html.dark .sticky-header {
-    background: rgba(30, 30, 30, 0.95);
+    background: rgba(var(--md-sys-color-background-rgb), 0.8);
     border-bottom: 1px solid #333;
 }
 """)
@@ -558,7 +672,7 @@ with open(login_css_path, 'w', encoding='utf-8') as f:
     f.write(""":root {
     --primary: #E5AA70; --primary-hover: #D4955D;
     --on-primary: #000000;
-    --bg-page: #F8F9FA; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
+    --bg-page: #F3F3F3; --bg-card: #FFFFFF; --bg-input: #FFFFFF;
     --text-main: #000000; --text-sub: #4A5568;
     --border: #8E8E8E;
     --danger-fg: #BA1A1A;
@@ -568,7 +682,7 @@ with open(login_css_path, 'w', encoding='utf-8') as f:
 html.dark {
     --primary: #E5AA70; --primary-hover: #D4955D;
     --on-primary: #000000;
-    --bg-page: #121212; --bg-card: #1E1E1E; --bg-input: #2C2C2C;
+    --bg-page: #121212; --bg-card: #1D1D1D; --bg-input: #1D1D1D;
     --text-main: #FFFFFF; --text-sub: #A0A0A0;
     --border: #4F4F4F;
     --shadow-md: 0px 2px 6px 2px rgba(0,0,0,0.15), 0px 1px 2px 0px rgba(0,0,0,0.3);
@@ -686,6 +800,14 @@ templates_to_create = {
                 <a href="/data/raw_loan_products" class="nav-item {{ 'active' if request.endpoint == 'view_data' else '' }}">
                     <svg class="nav-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s 9-1.34 9-3V5"></path></svg>
                     데이터 조회
+                </a>
+                <a href="/data-files" class="nav-item {{ 'active' if request.endpoint == 'data_file_viewer' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    파일 뷰어
+                </a>
+                <a href="/analytics" class="nav-item {{ 'active' if request.endpoint == 'analytics' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                    분석 대시보드
                 </a>
             </div>
             <div class="sidebar-footer">
@@ -957,22 +1079,48 @@ templates_to_create = {
 
                 const ctx = document.getElementById('logStatusChart').getContext('2d');
                 
+                // [M3 Style] CSS Variable Helper
+                const getCssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+                // [M3 Style] Tonal Palette Colors
+                const colorSuccess = getCssVar('--md-sys-color-primary') || '#E5AA70';
+                const colorError = getCssVar('--md-sys-color-error') || '#BA1A1A';
+                const colorSkipped = getCssVar('--md-sys-color-outline') || '#717171';
+                const colorEmpty = getCssVar('--md-sys-color-surface-variant') || '#E1E3E1';
+                const colorBg = getCssVar('--bg-card') || '#FFFFFF';
+
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['Success', 'Fail', 'Skipped'],
                         datasets: [{
                             data: total === 0 ? [1] : [success, fail, skipped],
-                            backgroundColor: total === 0 ? ['#F3F4F6'] : ['#10B981', '#F43F5E', '#E5E7EB'],
-                            borderWidth: 0,
-                            hoverOffset: total === 0 ? 0 : 4
+                            backgroundColor: total === 0 ? [colorEmpty] : [colorSuccess, colorError, colorSkipped],
+                            borderWidth: 2,
+                            borderColor: colorBg,
+                            borderRadius: 20, // M3 Rounded Corners
+                            hoverOffset: total === 0 ? 0 : 8,
+                            spacing: 2
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: { legend: { display: false }, tooltip: { enabled: total > 0 } },
+                        cutout: '75%', // Thinner ring for modern look
+                        animation: { animateScale: true, animateRotate: true },
+                        plugins: { 
+                            legend: { display: false }, 
+                            tooltip: { 
+                                enabled: total > 0,
+                                backgroundColor: getCssVar('--md-sys-color-inverse-surface') || '#313033',
+                                titleColor: getCssVar('--md-sys-color-inverse-on-surface') || '#F4EFF4',
+                                bodyColor: getCssVar('--md-sys-color-inverse-on-surface') || '#F4EFF4',
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                usePointStyle: true
+                            } 
+                        },
                         onClick: (e, elements) => {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
@@ -991,6 +1139,40 @@ templates_to_create = {
         </script>
 
         <div class="dashboard-grid">
+            <!-- Card: Recent Users -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">최근 가입 회원</h3>
+                    <a href="/members" class="nav-btn" style="font-size: 0.75rem; padding: 4px 12px; height: 28px;">전체보기</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="w-full" style="font-size: 0.85rem; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">이름</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">ID</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">가입일</th>
+                                <th style="padding: 10px 16px; text-align: center; background: var(--bg-soft);">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in recent_users %}
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 10px 16px;"><strong>{{ u.user_name }}</strong></td>
+                                <td style="padding: 10px 16px;" class="text-muted">{{ u.user_id }}</td>
+                                <td style="padding: 10px 16px;">{{ u.join_date }}</td>
+                                <td style="padding: 10px 16px; text-align: center;">
+                                    <span class="badge {{ 'badge-success' if u.status == 'active' else 'badge-danger' if u.status == 'suspended' else 'badge-neutral' }}" style="font-size: 0.7rem;">{{ u.status }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted p-4">가입 회원이 없습니다.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Card 1: Loan -->
             <div class="card">
                 <div class="card-header">
@@ -1116,6 +1298,7 @@ templates_to_create = {
 {% block content %}
 <h1>금융 데이터 수집 관리</h1>
 
+<!-- [M3 Guide Card] 기능 설명 및 가이드 -->
 <div class="card guide-card">
     <div class="card-p">
         <div class="flex items-center gap-2 mb-2">
@@ -1135,32 +1318,60 @@ templates_to_create = {
 
 <div class="info-banner">데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 데이터를 즉시 새로고침(수집)할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 새로고침 버튼도 비활성화됩니다.</div>
 
-<div class="dashboard-grid">
+<div class="flex justify-end mb-4">
+    <button onclick="openAddSourceModal()" class="btn-accent flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        새 수집기 추가
+    </button>
+</div>
+
+<div class="grid-2">
     {% for src in sources %}
-    <div class="card card-p">
+    <div class="card card-p relative {% if 'SUCCESS' in src.last_status %}border-success{% elif src.last_status == 'FAIL' %}border-danger{% endif %}">
+        <!-- Header & Toggle -->
         <div class="flex justify-between items-start mb-6 relative" style="z-index: 20;">
             <div>
-                <h3 class="card-title text-lg mb-1">{{ src.label }}</h3>
+                <h3 class="card-title text-lg mb-1 flex items-center gap-2">
+                    {{ src.label }}
+                    {% if src.enabled %}
+                        <span class="status-dot dot-success" title="활성 상태"></span>
+                    {% else %}
+                        <span class="status-dot dot-neutral" style="background-color: var(--text-muted);" title="비활성 상태"></span>
+                    {% endif %}
+                </h3>
                 <p class="text-xs text-muted">{{ src.api_desc }}</p>
             </div>
-            <form action="/toggle_collector" method="post" style="margin:0;">
-                <input type="hidden" name="source" value="{{ src.key }}">
-                <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
-                    <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }}>
-                    <span class="slider"></span>
-                </label>
-            </form>
+            <div class="flex items-center gap-2">
+                <form action="/toggle_collector" method="post" style="margin:0;">
+                    <input type="hidden" name="source" value="{{ src.key }}">
+                    <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
+                        <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }} aria-label="{{ src.label }} 수집기 토글">
+                        <span class="slider"></span>
+                    </label>
+                </form>
+                <!-- 삭제 버튼 -->
+                <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger hover:bg-red-50" title="수집기 삭제">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
         </div>
         
-        <!-- Status Grid -->
-        <div class="grid-3 gap-4 mb-6 p-4 bg-soft rounded-lg border">
+        <!-- Status Grid (M3 Surface Container High) -->
+        <div class="grid-4 gap-4 mb-6 p-4 bg-soft rounded-lg border">
             <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">상태</span>
+                <span class="text-xs text-muted font-medium uppercase tracking-wider">상태 (Status)</span>
                 <div class="flex items-center gap-2">
-                    <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">{{ src.last_status or '-' }}</span>
+                    <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' or 'SUCCESS' in src.last_status else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">
+                        {{ src.last_status or '대기중' }}
+                    </span>
+                    <!-- Manual Trigger Button -->
                     <form action="/trigger" method="post" class="inline-flex">
-                        <button type="submit" name="job" value="{{ src.trigger_val }}" title="데이터 새로고침" class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" {{ 'disabled' if not src.enabled else '' }} style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                        <button type="submit" name="job" value="{{ src.trigger_val }}" 
+                                title="데이터 새로고침 (즉시 실행)" 
+                                class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" 
+                                {{ 'disabled' if not src.enabled else '' }} 
+                                style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                         </button>
                     </form>
                 </div>
@@ -1170,76 +1381,70 @@ templates_to_create = {
                 <span class="text-sm font-bold text-main font-mono">{{ src.last_run }}</span>
             </div>
             <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">누적 데이터</span>
-                <span class="text-sm font-bold text-primary font-mono">{{ src.total_count }}</span>
+                <span class="text-xs text-muted font-medium uppercase tracking-wider">다음 실행</span>
+                <span class="text-sm font-bold text-primary font-mono">{{ src.next_run }}</span>
             </div>
+            <a href="{{ url_for('view_data', table_name='collection_logs', search_col='target_source', search_val=src.log_source) }}" class="flex flex-col gap-1 text-decoration-none" style="text-decoration: none;" title="전체 로그 보기">
+                <div class="flex flex-col gap-1">
+                    <span class="text-xs text-muted font-medium uppercase tracking-wider">누적 데이터</span>
+                    <span class="text-sm font-bold text-primary font-mono">{{ src.total_count }}</span>
+                </div>
+            </a>
         </div>
 
-        <!-- Configuration -->
-        <form action="/collection-management/config" method="post" class="space-y-4">
+        <!-- Configuration Display (Read-Only) -->
+        <div class="space-y-4 relative" style="z-index: 20;">
+            <!-- API Endpoint (Read-only) -->
             <div>
-                <label class="form-label text-xs uppercase text-muted mb-2">API Key (인증키)</label>
+                <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
+                <input type="text" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly>
+            </div>
+
+            <!-- API Key Input -->
+            <div>
+                <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
                 <div class="relative">
-                    <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-soft pr-10">
-                    <span onclick="togglePassword('input_{{ src.key }}', this)" class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" title="키 보기/숨기기">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </span>
+                    <input type="password" value="{{ src.api_value }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly disabled>
                 </div>
                 <p class="help-text mt-1">해당 기관에서 발급받은 API Key가 있어야 데이터 수집이 가능합니다.</p>
             </div>
             
             <div class="grid-2 gap-4">
+                <!-- Frequency Selection (Chips) -->
                 <div>
                     <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
-                    <div class="radio-group">
+                    <div class="flex gap-2">
                         {% set f_val = src.freq_value %}
-                        {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
-                        
-                        {% for val, label in freq_options %}
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" 
-                                   {% if f_val == val %}checked{% endif %}>
-                            <span>{{ label }}</span>
-                        </label>
-                        {% endfor %}
+                        <span class="badge badge-neutral">{{ f_val|upper }}</span>
+                        {% if f_val == 'daily' and src.time_value %}<span class="text-sm text-sub">{{ src.time_value }}</span>{% endif %}
+                        {% if f_val == 'weekly' and src.weekday_value %}<span class="text-sm text-sub">{{ src.weekday_value|upper }}</span>{% endif %}
+                        {% if f_val == 'monthly' and src.day_value %}<span class="text-sm text-sub">Day {{ src.day_value }}</span>{% endif %}
                     </div>
                     <p class="help-text mt-1">데이터 갱신 빈도를 설정합니다.</p>
                 </div>
+                
+                <!-- Period Selection (Chips + Custom Input) -->
                 <div>
                     <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
-                    <div class="radio-group">
-                        {% set p_val = src.period_value | int %}
-                        {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
-                        {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
-                        
-                        {% for val, label in options %}
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}" 
-                                   onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                   {% if p_val == val %}checked{% endif %}>
-                            <span>{{ label }}</span>
-                        </label>
-                        {% endfor %}
-                        
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.period_field }}_opt" value="custom" 
-                                   onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                   {% if is_custom %}checked{% endif %}>
-                            <span>기타</span>
-                        </label>
+                    <div class="flex gap-2">
+                        {% if src.period_value == '0' %}
+                            <span class="badge badge-neutral">전체</span>
+                        {% else %}
+                            <span class="badge badge-neutral">{{ src.period_value }}개월</span>
+                        {% endif %}
                     </div>
-                    <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" min="0" max="60" class="form-input text-sm w-full mt-2" style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
                     <p class="help-text mt-1">과거 데이터를 얼마나 가져올지 설정합니다. (0=전체)</p>
                 </div>
             </div>
 
             <div class="flex justify-end pt-2">
-                <button type="submit" class="btn-primary">
-                    설정 저장
+                <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.remove('hidden')" class="btn-tonal">
+                    설정 수정
                 </button>
             </div>
-        </form>
+        </div>
 
+        <!-- Disabled Overlay (M3 State Layer) -->
         {% if not src.enabled %}
         <div class="card-disabled-overlay">
             <div class="card-disabled-label">
@@ -1249,6 +1454,176 @@ templates_to_create = {
         {% endif %}
     </div>
     {% endfor %}
+</div>
+
+{% for src in sources %}
+        <div id="editSourceModal_{{ src.key }}" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3>수집기 수정: {{ src.label }}</h3>
+                    <button onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="close-btn">&times;</button>
+                </div>
+                <form action="/collection-management/config" method="post" class="modal-body space-y-4">
+                    <!-- API Endpoint -->
+                    <div>
+                        <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
+                        <input type="text" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-input" placeholder="https://api.example.com/...">
+                    </div>
+
+                    <!-- API Key Input -->
+                    <div>
+                        <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
+                        <div class="relative">
+                            <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" 
+                                   placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-input pr-10">
+                            <span onclick="togglePassword('input_{{ src.key }}', this)" 
+                                  class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" 
+                                  title="키 보기/숨기기" role="button" tabindex="0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2 gap-4">
+                        <!-- Frequency Selection -->
+                        <div>
+                            <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
+                            <div class="radio-group">
+                                {% set f_val = src.freq_value %}
+                                {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
+                                {% for val, label in freq_options %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" {% if f_val == val %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Period Selection -->
+                        <div>
+                            <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
+                            <div class="radio-group">
+                                {% set p_val = src.period_value | int %}
+                                {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
+                                {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
+                                {% for val, label in options %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}" 
+                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                           {% if p_val == val %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.period_field }}_opt" value="custom" 
+                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                           {% if is_custom %}checked{% endif %}>
+                                    <span>기타</span>
+                                </label>
+                            </div>
+                            <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" 
+                                   min="0" max="60" class="form-input text-sm w-full mt-2" 
+                                   style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-light mt-4">
+                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal mr-2">취소</button>
+                        <button type="submit" class="btn-primary">설정 저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+{% endfor %}
+
+<!-- Add Source Modal -->
+<div id="addSourceModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>새 수집기 추가</h3>
+            <button onclick="closeAddSourceModal()" class="close-btn">&times;</button>
+        </div>
+        <form id="addSourceForm" action="/collection-management/add" method="post" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">수집기 이름 (Label) <span class="text-danger">*</span></label>
+                <input type="text" id="newSourceLabel" name="label" class="form-input" placeholder="예: 부동산 실거래가 수집">
+                <p id="labelError" class="text-xs text-danger mt-1" style="display: none;">수집기 이름을 입력해주세요.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">설명 (Description) <span class="text-danger">*</span></label>
+                <input type="text" id="newSourceDesc" name="description" class="form-input" placeholder="예: 국토부 API 연동">
+                <p id="descError" class="text-xs text-danger mt-1" style="display: none;">설명을 입력해주세요.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">API Endpoint URL</label>
+                <input type="text" name="endpoint" class="form-input" placeholder="예: https://api.example.com/v1/data">
+            </div>
+            
+            <!-- Extended Configuration Fields -->
+            <div class="form-group">
+                <label class="form-label">API Key (인증키)</label>
+                <input type="password" name="api_key" class="form-input" placeholder="인증키 입력">
+            </div>
+            
+            <div class="grid-2 gap-4">
+                <div>
+                    <label class="form-label">수집 주기</label>
+                    <div class="radio-group">
+                        <label class="radio-chip"><input type="radio" name="frequency" value="daily" checked><span>매일</span></label>
+                        <label class="radio-chip"><input type="radio" name="frequency" value="weekly"><span>매주</span></label>
+                        <label class="radio-chip"><input type="radio" name="frequency" value="monthly"><span>매월</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">수집 기간</label>
+                    <div class="radio-group">
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="0" onchange="togglePeriodInput(this, 'new_period_input')" checked>
+                            <span>전체</span>
+                        </label>
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="1" onchange="togglePeriodInput(this, 'new_period_input')">
+                            <span>1개월</span>
+                        </label>
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="custom" onchange="togglePeriodInput(this, 'new_period_input')">
+                            <span>기타</span>
+                        </label>
+                    </div>
+                    <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input text-sm w-full mt-2" style="display:none;" placeholder="개월 수 입력">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeAddSourceModal()" class="btn-tonal">취소</button>
+                <button type="button" onclick="submitAddSource()" class="btn-primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteSourceModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3 class="text-danger">수집기 삭제</h3>
+            <button onclick="closeDeleteSourceModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warn-banner mb-4">
+                정말 <strong id="deleteTargetLabel"></strong> 수집기를 삭제하시겠습니까?<br>
+                삭제된 데이터와 설정은 복구할 수 없습니다.
+            </div>
+            <form id="deleteSourceForm" action="/collection-management/delete" method="post">
+                <input type="hidden" name="source_key" id="deleteSourceKey">
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeDeleteSourceModal()" class="btn-tonal">취소</button>
+                    <button type="submit" class="btn-outline-danger">삭제 확정</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1266,11 +1641,57 @@ function togglePassword(inputId, iconSpan) {
     var input = document.getElementById(inputId);
     if (input.type === "password") {
         input.type = "text";
-        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
     } else {
         input.type = "password";
-        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
     }
+}
+
+function openAddSourceModal() {
+    document.getElementById('addSourceModal').classList.remove('hidden');
+    document.getElementById('newSourceLabel').value = '';
+    document.getElementById('newSourceDesc').value = '';
+    document.getElementById('newSourceLabel').classList.remove('border-danger');
+    document.getElementById('newSourceDesc').classList.remove('border-danger');
+    document.getElementById('labelError').style.display = 'none';
+    document.getElementById('descError').style.display = 'none';
+}
+function closeAddSourceModal() {
+    document.getElementById('addSourceModal').classList.add('hidden');
+}
+function submitAddSource() {
+    var labelInput = document.getElementById('newSourceLabel');
+    var descInput = document.getElementById('newSourceDesc');
+    var labelError = document.getElementById('labelError');
+    var descError = document.getElementById('descError');
+    var isValid = true;
+
+    labelInput.classList.remove('border-danger');
+    descInput.classList.remove('border-danger');
+    labelError.style.display = 'none';
+    descError.style.display = 'none';
+
+    if (!labelInput.value.trim()) {
+        labelInput.classList.add('border-danger');
+        labelError.style.display = 'block';
+        isValid = false;
+    }
+    if (!descInput.value.trim()) {
+        descInput.classList.add('border-danger');
+        descError.style.display = 'block';
+        isValid = false;
+    }
+    if (isValid) document.getElementById('addSourceForm').submit();
+}
+
+function openDeleteSourceModal(key, label) {
+    document.getElementById('deleteSourceKey').value = key;
+    document.getElementById('deleteTargetLabel').textContent = label;
+    document.getElementById('deleteSourceModal').classList.remove('hidden');
+}
+function closeDeleteSourceModal() {
+    document.getElementById('deleteSourceModal').classList.add('hidden');
 }
 </script>
 {% endblock %}""",
@@ -2880,9 +3301,16 @@ function submitBulkDelete() {
         <table class="w-full">
             <thead><tr>
                 {% for col in columns %}
-                <th class="nowrap">
-                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit;">
-                        {{ col }} {% if sort_by == col %}<span class="text-primary">{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}
+                <th class="nowrap {% if sort_by == col %}bg-soft{% endif %}">
+                    <a href="{{ url_for('view_data', table_name=table_name, page=1, sort_by=col, order='desc' if sort_by == col and order == 'asc' else 'asc', search_col=search_col, search_val=search_val) }}" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: flex-start; gap: 4px;">
+                        <span class="{% if sort_by == col %}text-primary font-bold{% endif %}">{{ col }}</span>
+                        {% if sort_by == col %}
+                            {% if order == 'asc' %}
+                                <svg style="width: 0.8rem; height: 0.8rem;" class="text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                            {% else %}
+                                <svg style="width: 0.8rem; height: 0.8rem;" class="text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            {% endif %}
+                        {% endif %}
                     </a>
                 </th>
                 {% endfor %}
@@ -2894,6 +3322,12 @@ function submitBulkDelete() {
                     <td>
                         {% if col in ['status', 'type', 'transaction_type', 'product_type'] %}
                             <span class="badge badge-neutral">{{ row[col] }}</span>
+                        {% elif col in ['message', 'error_message', 'description', 'memo', 'reason', 'api_desc'] and row[col] %}
+                            <div class="text-truncate" style="max-width: 300px; cursor: pointer; color: var(--text-main);" 
+                                 onclick="showLogMessage(this.getAttribute('data-msg'))" 
+                                 data-msg="{{ row[col] }}" title="클릭하여 전체 보기">
+                                {{ row[col] }}
+                            </div>
                         {% else %}
                             {{ row[col] }}
                         {% endif %}
@@ -3103,6 +3537,75 @@ function submitBulkDelete() {
             <button type="submit" class="btn-primary">저장</button>
         </div>
     </form>
+</div>
+{% endblock %}"""
+,
+    'streamlit_embed.html': """{% extends "base.html" %}
+{% block content %}
+    <h1>분석 대시보드 (Streamlit)</h1>
+    <div class="info-banner">
+        Streamlit 대시보드를 Flask 어드민 내에서 조회합니다. 
+        <br>화면이 보이지 않는다면 터미널에서 <code>streamlit run admin_app.py</code>가 실행 중인지 확인해주세요.
+    </div>
+    <div class="card" style="height: 80vh; overflow: hidden;">
+        <iframe src="http://127.0.0.1:8501" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+{% endblock %}""",
+    'data_file_viewer.html': """{% extends "base.html" %}
+{% block content %}
+<h1>수집 데이터 파일 뷰어</h1>
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">File Viewer</span>
+            <h3 class="font-bold text-sm">JSON 파일 뷰어</h3>
+        </div>
+        <p class="text-sm text-sub">
+            커스텀 수집기를 통해 저장된 JSON 파일들의 목록을 조회하고 내용을 확인합니다.
+        </p>
+    </div>
+</div>
+
+<div class="grid-1-2">
+    <div class="card card-p h-fit" style="max-height: 80vh; overflow-y: auto;">
+        <h3 class="card-title mt-0 mb-4">파일 목록</h3>
+        {% if files %}
+        <div class="flex flex-col gap-2">
+            {% for file in files %}
+            <div class="p-3 rounded-lg border {{ 'border-primary bg-soft' if file.name == selected_file else 'border-light hover:bg-soft' }} transition flex justify-between items-center group">
+                <a href="{{ url_for('data_file_viewer', file=file.name) }}" class="flex-1 text-decoration-none" style="text-decoration: none;">
+                    <div class="font-bold text-sm text-main mb-1">{{ file.name }}</div>
+                    <div class="flex justify-between text-xs text-muted">
+                        <span>{{ file.mtime }}</span>
+                        <span>{{ file.size }}</span>
+                    </div>
+                </a>
+                <form action="{{ url_for('delete_data_file') }}" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');" class="ml-2">
+                    <input type="hidden" name="filename" value="{{ file.name }}">
+                    <button type="submit" class="btn-icon text-danger hover:bg-red-50 p-1" title="파일 삭제">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">저장된 파일이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card card-p h-fit">
+        <h3 class="card-title mt-0 mb-4">파일 내용: {{ selected_file or '선택된 파일 없음' }}</h3>
+        {% if file_content %}
+        <div class="bg-soft p-4 rounded-lg overflow-auto" style="max-height: 70vh;">
+            <pre class="text-xs font-mono m-0" style="white-space: pre-wrap; color: var(--text-main);">{{ file_content }}</pre>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-10 dashed-border rounded-lg">
+            왼쪽 목록에서 파일을 선택하여 내용을 확인하세요.
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}"""
 }
@@ -3384,6 +3887,34 @@ def init_schema(engine):
                 )
             """))
 
+            # [New] Feature: Dynamic Collection Sources
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS collection_sources (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    source_key VARCHAR(50) NOT NULL UNIQUE,
+                    label VARCHAR(100) NOT NULL,
+                    api_desc VARCHAR(255),
+                    trigger_val VARCHAR(50) NOT NULL,
+                    log_source VARCHAR(50) NOT NULL,
+                    config_key_enabled VARCHAR(100),
+                    api_key_config VARCHAR(100),
+                    period_key VARCHAR(100),
+                    freq_key VARCHAR(100),
+                    is_default TINYINT(1) DEFAULT 0,
+                    endpoint VARCHAR(255),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+
+            # [Self-Repair] collection_sources 테이블에 is_default 컬럼 추가 (없을 경우)
+            try:
+                conn.execute(text("SELECT is_default FROM collection_sources LIMIT 0"))
+            except Exception:
+                try:
+                    conn.execute(text("ALTER TABLE collection_sources ADD COLUMN is_default TINYINT(1) DEFAULT 0"))
+                except Exception:
+                    pass
+
             # Feature 7: point_purchases 테이블 생성
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS point_purchases (
@@ -3559,11 +4090,13 @@ def start_scheduler():
         print("Background scheduler started.")
 
 # 앱 시작 시 스키마 초기화 (DB 연결 가능 시)
+print("⏳ DB 스키마 초기화 및 연결 확인 중...")
 try:
     _init_collector = get_collector()
     init_schema(_init_collector.engine)
+    print("✅ DB 초기화 완료")
 except Exception as e:
-    print(f"Init schema skipped: {e}")
+    print(f"⚠️ DB 초기화 건너뜀 (연결 실패): {e}")
 
 # ==========================================================================
 # [함수] 로그 테이블 생성기, 인증, 통계
@@ -3718,6 +4251,16 @@ def _render_dashboard(message=None, status=None):
         economy_last_run = economy_logs[0]['executed_at'] if economy_logs and economy_logs[0].get('executed_at') else None
         income_last_run = income_logs[0]['executed_at'] if income_logs and income_logs[0].get('executed_at') else None
 
+        # [New] 최근 가입 회원 조회
+        recent_users = []
+        try:
+            with collector.engine.connect() as conn:
+                # users 테이블 존재 여부 확인 (안전하게)
+                rows = conn.execute(text("SELECT user_id, user_name, join_date, status FROM users ORDER BY created_at DESC LIMIT 5")).fetchall()
+                recent_users = [dict(zip(['user_id', 'user_name', 'join_date', 'status'], row)) for row in rows]
+        except Exception:
+            pass
+
         # 최근 24시간 에러 로그 확인
         recent_errors = 0
         try:
@@ -3748,6 +4291,7 @@ def _render_dashboard(message=None, status=None):
             message=message, status=status,
             loan_logs=loan_logs, economy_logs=economy_logs, income_logs=income_logs,
             loan_last_run=loan_last_run, economy_last_run=economy_last_run, income_last_run=income_last_run,
+            recent_users=recent_users,
             auto_refresh=session.get('auto_refresh', True), stats=stats,
             system_status=system_status,
             sort_by=sort_by, order=order, status_filter=status_filter)
@@ -3756,6 +4300,7 @@ def _render_dashboard(message=None, status=None):
         return render_template('index.html',
             message=message or f"시스템 오류: {e}", status=status or "error",
             loan_last_run="-", economy_last_run="-", income_last_run="-",
+            recent_users=[],
             loan_logs=[], economy_logs=[], income_logs=[],
             auto_refresh=session.get('auto_refresh', True), stats={},
             system_status=system_status_error,
@@ -3852,48 +4397,130 @@ def collection_management():
         collector = get_collector()
         configs = get_all_configs(collector.engine)
 
-        source_defs = [
-            {'key': 'FSS_LOAN', 'config_key': 'COLLECTOR_FSS_LOAN_ENABLED', 'label': '금감원 대출상품 (FSS Loan API)', 'trigger_val': 'loan', 'log_source': 'FSS_LOAN_API', 'api_field': 'fss_key', 'api_key': 'API_KEY_FSS', 'api_desc': '금융상품통합비교공시 API 인증키', 'period_field': 'period_fss_loan', 'period_key': 'COLLECTION_PERIOD_FSS_LOAN', 'freq_field': 'freq_fss_loan', 'freq_key': 'COLLECTION_FREQUENCY_FSS_LOAN'},
-            {'key': 'ECONOMIC', 'config_key': 'COLLECTOR_ECONOMIC_ENABLED', 'label': '경제 지표 (Economic Indicators)', 'trigger_val': 'economy', 'log_source': 'ECONOMIC_INDICATORS', 'api_field': 'ecos_key', 'api_key': 'API_KEY_ECOS', 'api_desc': 'ECOS 통계 API 인증키', 'period_field': 'period_economic', 'period_key': 'COLLECTION_PERIOD_ECONOMIC', 'freq_field': 'freq_economic', 'freq_key': 'COLLECTION_FREQUENCY_ECONOMIC'},
-            {'key': 'KOSIS_INCOME', 'config_key': 'COLLECTOR_KOSIS_INCOME_ENABLED', 'label': '통계청 소득정보 (KOSIS Income)', 'trigger_val': 'income', 'log_source': 'KOSIS_INCOME_API', 'api_field': 'kosis_key', 'api_key': 'API_KEY_KOSIS', 'api_desc': 'KOSIS 공유서비스 API 인증키', 'period_field': 'period_kosis_income', 'period_key': 'COLLECTION_PERIOD_KOSIS_INCOME', 'freq_field': 'freq_kosis_income', 'freq_key': 'COLLECTION_FREQUENCY_KOSIS_INCOME'},
-        ]
-
         sources = []
-        for sd in source_defs:
-            logs = get_recent_logs(collector.engine, source=sd['log_source'], limit=1)
-            last_log = logs[0] if logs else {}
-            
-            # 집계 데이터 조회 (최초 실행, 누적 건수)
-            try:
-                with collector.engine.connect() as conn:
-                    agg = conn.execute(text("""
-                        SELECT MIN(executed_at), SUM(row_count) 
-                        FROM collection_logs 
-                        WHERE target_source = :s
-                    """), {'s': sd['log_source']}).fetchone()
-                    first_run = agg[0].strftime('%Y-%m-%d %H:%M') if agg[0] else '-'
-                    total_count = int(agg[1]) if agg[1] else 0
-            except Exception:
-                first_run = '-'
-                total_count = 0
+        with collector.engine.connect() as conn:
+            # [Self-Repair] 1. 테이블 생성 (없을 경우 대비)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS collection_sources (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    source_key VARCHAR(50) NOT NULL UNIQUE,
+                    label VARCHAR(100) NOT NULL,
+                    api_desc VARCHAR(255),
+                    trigger_val VARCHAR(50) NOT NULL,
+                    log_source VARCHAR(50) NOT NULL,
+                    config_key_enabled VARCHAR(100),
+                    api_key_config VARCHAR(100),
+                    period_key VARCHAR(100),
+                    freq_key VARCHAR(100),
+                    is_default TINYINT(1) DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
 
-            sources.append({
-                'key': sd['key'],
-                'label': sd['label'],
-                'trigger_val': sd['trigger_val'],
-                'enabled': configs.get(sd['config_key'], '1') == '1',
-                'last_run': last_log.get('executed_at', '-') if not last_log.get('executed_at') else last_log['executed_at'].strftime('%Y-%m-%d %H:%M'),
-                'last_status': last_log.get('status', '-'),
-                'api_field': sd['api_field'],
-                'api_value': configs.get(sd['api_key'], ''),
-                'api_desc': sd['api_desc'],
-                'period_field': sd['period_field'],
-                'period_value': configs.get(sd['period_key'], '0'),
-                'freq_field': sd['freq_field'],
-                'freq_value': configs.get(sd['freq_key'], 'daily'),
-                'first_run': first_run,
-                'total_count': "{:,}".format(total_count)
-            })
+            # [Self-Repair] 2. is_default 컬럼 확인 및 추가 (기존 테이블에 컬럼이 없을 경우 대비)
+            try:
+                conn.execute(text("SELECT is_default FROM collection_sources LIMIT 0"))
+            except Exception:
+                try:
+                    conn.execute(text("ALTER TABLE collection_sources ADD COLUMN is_default TINYINT(1) DEFAULT 0"))
+                except Exception:
+                    pass
+
+            # [Self-Repair] endpoint 컬럼 확인 및 추가
+            try:
+                conn.execute(text("SELECT endpoint FROM collection_sources LIMIT 0"))
+            except Exception:
+                try:
+                    conn.execute(text("ALTER TABLE collection_sources ADD COLUMN endpoint VARCHAR(255)"))
+                except Exception:
+                    pass
+
+            # DB에서 수집기 목록 조회 (명시적 컬럼 지정으로 매핑 오류 방지)
+            query = """
+                SELECT source_key, label, api_desc, trigger_val, log_source, 
+                       config_key_enabled, api_key_config, period_key, freq_key, is_default, endpoint 
+                FROM collection_sources 
+                ORDER BY is_default DESC, id ASC
+            """
+            rows = conn.execute(text(query)).fetchall()
+            
+            for row in rows:
+                # 인덱스로 매핑하여 안전하게 딕셔너리 생성
+                src = {
+                    'source_key': row[0],
+                    'label': row[1],
+                    'api_desc': row[2],
+                    'trigger_val': row[3],
+                    'log_source': row[4],
+                    'config_key_enabled': row[5],
+                    'api_key_config': row[6],
+                    'period_key': row[7],
+                    'freq_key': row[8],
+                    'is_default': row[9],
+                    'endpoint': row[10]
+                }
+                
+                logs = get_recent_logs(collector.engine, source=src['log_source'], limit=1)
+                last_log = logs[0] if logs else {}
+            
+                # [New] Calculate Next Run Time
+                next_run_str = "-"
+                if configs.get(src['config_key_enabled'], '1') == '1':
+                    try:
+                        freq = configs.get(src['freq_key'], 'daily')
+                        now = datetime.now()
+                        
+                        if freq == 'daily':
+                            run_time_str = configs.get(f"COLLECTION_TIME_{src['source_key']}", '09:00')
+                            run_time = datetime.strptime(run_time_str, "%H:%M").time()
+                            next_run = datetime.combine(now.date(), run_time)
+                            if next_run <= now:
+                                next_run += timedelta(days=1)
+                            next_run_str = next_run.strftime('%m-%d %H:%M')
+                        else:
+                            next_run_str = f"Scheduled ({freq})"
+                    except Exception:
+                        next_run_str = "계산 오류"
+                else:
+                    next_run_str = "비활성"
+
+                # 집계 데이터 조회 (최초 실행, 누적 건수)
+                try:
+                        agg = conn.execute(text("""
+                            SELECT MIN(executed_at), SUM(row_count) 
+                            FROM collection_logs 
+                            WHERE target_source = :s
+                        """), {'s': src['log_source']}).fetchone()
+                        first_run = agg[0].strftime('%Y-%m-%d %H:%M') if agg[0] else '-'
+                        total_count = int(agg[1]) if agg[1] else 0
+                except Exception:
+                    first_run = '-'
+                    total_count = 0
+
+                sources.append({
+                    'key': src['source_key'],
+                    'label': src['label'],
+                    'trigger_val': src['trigger_val'],
+                    'enabled': configs.get(src['config_key_enabled'], '1') == '1',
+                    'last_run': last_log.get('executed_at', '-') if not last_log.get('executed_at') else last_log['executed_at'].strftime('%Y-%m-%d %H:%M'),
+                    'last_status': last_log.get('status', '-'),
+                    'api_field': f"api_key_{src['source_key']}", # 동적 필드명 생성
+                    'api_value': configs.get(src['api_key_config'], ''),
+                    'api_desc': src['api_desc'],
+                    'endpoint': src['endpoint'],
+                    'period_field': f"period_{src['source_key']}",
+                    'period_value': configs.get(src['period_key'], '0'),
+                    'freq_field': f"freq_{src['source_key']}",
+                    'freq_value': configs.get(src['freq_key'], 'daily'),
+                    'day_value': configs.get(f"COLLECTION_DAY_{src['source_key']}", '1'),
+                    'is_last_day': configs.get(f"COLLECTION_IS_LAST_DAY_{src['source_key']}", '0') == '1',
+                    'weekday_value': configs.get(f"COLLECTION_WEEKDAY_{src['source_key']}", 'mon'),
+                    'time_value': configs.get(f"COLLECTION_TIME_{src['source_key']}", '09:00'),
+                    'first_run': first_run,
+                    'next_run': next_run_str,
+                    'total_count': "{:,}".format(total_count),
+                    'is_default': src['is_default'] == 1
+                })
 
         return render_template('collection_management.html', sources=sources)
     except Exception as e:
@@ -3904,19 +4531,17 @@ def collection_management():
 @login_required
 def toggle_collector():
     source = request.form.get('source')
-    source_map = {
-        'FSS_LOAN': 'COLLECTOR_FSS_LOAN_ENABLED',
-        'KOSIS_INCOME': 'COLLECTOR_KOSIS_INCOME_ENABLED',
-        'ECONOMIC': 'COLLECTOR_ECONOMIC_ENABLED',
-    }
-    config_key = source_map.get(source)
-    if not config_key:
-        flash('잘못된 수집 소스입니다.', 'error')
-        return redirect(url_for('collection_management'))
 
     try:
         collector = get_collector()
         with collector.engine.connect() as conn:
+            # DB에서 config_key 조회
+            config_key = conn.execute(text("SELECT config_key_enabled FROM collection_sources WHERE source_key = :k"), {'k': source}).scalar()
+            
+            if not config_key:
+                flash('잘못된 수집 소스입니다.', 'error')
+                return redirect(url_for('collection_management'))
+
             current = conn.execute(text("SELECT config_value FROM service_config WHERE config_key = :k"), {'k': config_key}).scalar()
             new_val = '0' if current == '1' else '1'
             conn.execute(text("UPDATE service_config SET config_value = :v WHERE config_key = :k"), {'v': new_val, 'k': config_key})
@@ -3930,29 +4555,114 @@ def toggle_collector():
 @login_required
 def update_collection_config():
     try:
-        # 폼에서 전송된 값만 업데이트 (개별 카드 저장 지원)
-        key_map = {
-            'fss_key': 'API_KEY_FSS',
-            'kosis_key': 'API_KEY_KOSIS',
-            'ecos_key': 'API_KEY_ECOS',
-            'period_fss_loan': 'COLLECTION_PERIOD_FSS_LOAN',
-            'period_economic': 'COLLECTION_PERIOD_ECONOMIC',
-            'period_kosis_income': 'COLLECTION_PERIOD_KOSIS_INCOME',
-            'freq_fss_loan': 'COLLECTION_FREQUENCY_FSS_LOAN',
-            'freq_economic': 'COLLECTION_FREQUENCY_ECONOMIC',
-            'freq_kosis_income': 'COLLECTION_FREQUENCY_KOSIS_INCOME'
-        }
-        
         collector = get_collector()
         with collector.engine.connect() as conn:
+            # 모든 수집기 설정 키 조회
+            sources = conn.execute(text("SELECT source_key, api_key_config, period_key, freq_key FROM collection_sources")).fetchall()
+            
+            key_map = {}
+            for s in sources:
+                key_map[f"api_key_{s.source_key}"] = s.api_key_config
+                key_map[f"period_{s.source_key}"] = s.period_key
+                key_map[f"freq_{s.source_key}"] = s.freq_key
+                key_map[f"day_{s.source_key}"] = f"COLLECTION_DAY_{s.source_key}"
+                key_map[f"is_last_day_{s.source_key}"] = f"COLLECTION_IS_LAST_DAY_{s.source_key}"
+                key_map[f"weekday_{s.source_key}"] = f"COLLECTION_WEEKDAY_{s.source_key}"
+                key_map[f"time_{s.source_key}"] = f"COLLECTION_TIME_{s.source_key}"
+
             for form_key, db_key in key_map.items():
+                val = None
                 if form_key in request.form:
                     val = request.form[form_key]
-                    conn.execute(text("UPDATE service_config SET config_value = :v WHERE config_key = :k"), {'v': val, 'k': db_key})
+                elif form_key.startswith('is_last_day_'):
+                    val = '0'
+                
+                if val is not None:
+                    exists = conn.execute(text("SELECT 1 FROM service_config WHERE config_key = :k"), {'k': db_key}).scalar()
+                    if exists:
+                        conn.execute(text("UPDATE service_config SET config_value = :v WHERE config_key = :k"), {'v': val, 'k': db_key})
+                    else:
+                        conn.execute(text("INSERT INTO service_config (config_key, config_value) VALUES (:k, :v)"), {'k': db_key, 'v': val})
+            
+            # Update endpoints in collection_sources
+            for s in sources:
+                ep_key = f"endpoint_{s.source_key}"
+                if ep_key in request.form:
+                    conn.execute(text("UPDATE collection_sources SET endpoint = :ep WHERE source_key = :k"), {'ep': request.form[ep_key], 'k': s.source_key})
             conn.commit()
         flash("수집 설정이 저장되었습니다.", "success")
     except Exception as e:
         flash(f"설정 저장 실패: {e}", "error")
+    return redirect(url_for('collection_management'))
+
+@app.route('/collection-management/add', methods=['POST'])
+@login_required
+def add_collection_source():
+    try:
+        label = request.form['label']
+        desc = request.form['description']
+        endpoint = request.form.get('endpoint', '')
+        
+        # [New] Additional Configs
+        api_key_val = request.form.get('api_key', '')
+        freq_val = request.form.get('frequency', 'daily')
+        period_val = request.form.get('period', '0')
+        
+        # 고유 키 생성
+        unique_id = str(uuid.uuid4())[:8].upper()
+        source_key = f"CUSTOM_{unique_id}"
+        trigger_val = f"custom_{unique_id.lower()}"
+        log_source = f"CUSTOM_{unique_id}_API"
+        
+        # 설정 키 자동 생성
+        config_key_enabled = f"COLLECTOR_{source_key}_ENABLED"
+        api_key_config = f"API_KEY_{source_key}"
+        period_key = f"COLLECTION_PERIOD_{source_key}"
+        freq_key = f"COLLECTION_FREQUENCY_{source_key}"
+        
+        collector = get_collector()
+        with collector.engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO collection_sources (source_key, label, api_desc, trigger_val, log_source, config_key_enabled, api_key_config, period_key, freq_key, is_default, endpoint)
+                VALUES (:key, :label, :desc, :trig, :log, :conf_en, :conf_key, :per_key, :freq_key, 0, :endp)
+            """), {
+                'key': source_key, 'label': label, 'desc': desc, 
+                'trig': trigger_val, 'log': log_source,
+                'conf_en': config_key_enabled, 'conf_key': api_key_config,
+                'per_key': period_key, 'freq_key': freq_key, 'endp': endpoint
+            })
+            
+            # 기본 설정값 추가
+            conn.execute(text("INSERT INTO service_config (config_key, config_value) VALUES (:k, '0')"), {'k': config_key_enabled})
+            conn.execute(text("INSERT INTO service_config (config_key, config_value) VALUES (:k, :v)"), {'k': api_key_config, 'v': api_key_val})
+            conn.execute(text("INSERT INTO service_config (config_key, config_value) VALUES (:k, :v)"), {'k': period_key, 'v': period_val})
+            conn.execute(text("INSERT INTO service_config (config_key, config_value) VALUES (:k, :v)"), {'k': freq_key, 'v': freq_val})
+            
+            conn.commit()
+            
+        flash(f"새로운 수집기 '{label}'이(가) 추가되었습니다.", "success")
+    except Exception as e:
+        flash(f"추가 실패: {e}", "error")
+    return redirect(url_for('collection_management'))
+
+@app.route('/collection-management/delete', methods=['POST'])
+@login_required
+def delete_collection_source():
+    source_key = request.form['source_key']
+    try:
+        collector = get_collector()
+        with collector.engine.connect() as conn:
+            # 설정값 삭제 (선택사항)
+            row = conn.execute(text("SELECT config_key_enabled, api_key_config, period_key, freq_key FROM collection_sources WHERE source_key = :k"), {'k': source_key}).fetchone()
+            if row:
+                for key in row:
+                    conn.execute(text("DELETE FROM service_config WHERE config_key = :k"), {'k': key})
+            
+            conn.execute(text("DELETE FROM collection_sources WHERE source_key = :k"), {'k': source_key})
+            conn.commit()
+            flash("수집기가 삭제되었습니다.", "success")
+    except Exception as e:
+        flash(f"삭제 실패: {e}", "error")
     return redirect(url_for('collection_management'))
 
 @app.route('/trigger', methods=['POST'])
@@ -3963,22 +4673,46 @@ def trigger_job():
         collector = get_collector()
         configs = get_all_configs(collector.engine)
 
-        enable_map = {'loan': 'COLLECTOR_FSS_LOAN_ENABLED', 'economy': 'COLLECTOR_ECONOMIC_ENABLED', 'income': 'COLLECTOR_KOSIS_INCOME_ENABLED'}
-        config_key = enable_map.get(job_type)
+        # DB에서 trigger_val에 해당하는 정보 조회 (endpoint 포함)
+        with collector.engine.connect() as conn:
+            row = conn.execute(text("SELECT source_key, config_key_enabled, endpoint, log_source FROM collection_sources WHERE trigger_val = :t"), {'t': job_type}).fetchone()
+        
+        if not row:
+             return _render_dashboard(message=f"알 수 없는 수집 작업입니다: {job_type}", status="error")
+        
+        source_key, config_key, endpoint, log_source = row
+        
         if config_key and configs.get(config_key, '1') != '1':
             return _render_dashboard(message=f"해당 수집 소스가 비활성화 상태입니다. 수집 관리에서 활성화해주세요.", status="warning")
 
         if job_type == 'loan':
             collector.collect_fss_loan_products()
+            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
+            if logs and logs[0]['status'] == 'FAIL':
+                return _render_dashboard(message=f"대출상품 수집 실패: {logs[0].get('error_message')}", status="error")
             msg = "대출상품 수집이 완료되었습니다."
         elif job_type == 'economy':
             collector.collect_economic_indicators()
+            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
+            if logs and logs[0]['status'] == 'FAIL':
+                return _render_dashboard(message=f"경제 지표 수집 실패: {logs[0].get('error_message')}", status="error")
             msg = "경제 지표 수집이 완료되었습니다."
         elif job_type == 'income':
             collector.collect_kosis_income_stats()
+            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
+            if logs and logs[0]['status'] == 'FAIL':
+                return _render_dashboard(message=f"소득 통계 수집 실패: {logs[0].get('error_message')}", status="error")
             msg = "소득 통계 수집이 완료되었습니다."
         else:
-            msg = "알 수 없는 작업입니다."
+            # 커스텀 수집기 처리
+            if endpoint:
+                success, error = collector.collect_custom_source(source_key, endpoint)
+                if success:
+                    msg = f"'{source_key}' 수집이 완료되었습니다."
+                else:
+                    return _render_dashboard(message=f"수집 실패 ({source_key}): {error} (Target: {endpoint})", status="error")
+            else:
+                return _render_dashboard(message=f"커스텀 수집기 '{job_type}' 실행 실패: Endpoint URL이 설정되지 않았습니다.", status="error")
 
         return _render_dashboard(message=msg, status="success")
     except Exception as e:
@@ -5322,6 +6056,88 @@ def mark_notification_read(notification_id):
         flash(f"알림 처리 실패: {e}", "error")
     return redirect(request.referrer or url_for('view_data', table_name='notifications'))
 
+@app.route('/data-files')
+@login_required
+def data_file_viewer():
+    data_dir = os.path.join(basedir, 'data', 'custom_sources')
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    
+    files = []
+    try:
+        for f in os.listdir(data_dir):
+            if f.endswith('.json'):
+                path = os.path.join(data_dir, f)
+                stats = os.stat(path)
+                size_str = f"{stats.st_size / 1024:.1f} KB" if stats.st_size > 1024 else f"{stats.st_size} B"
+                files.append({
+                    'name': f,
+                    'size': size_str,
+                    'mtime': datetime.fromtimestamp(stats.st_mtime).strftime('%Y-%m-%d %H:%M')
+                })
+        files.sort(key=lambda x: x['name'], reverse=True)
+    except Exception as e:
+        flash(f"파일 목록 조회 실패: {e}", "error")
+    
+    selected_file = request.args.get('file')
+    file_content = None
+    if selected_file:
+        if '..' in selected_file or '/' in selected_file or '\\' in selected_file:
+            flash("잘못된 파일명입니다.", "error")
+        else:
+            try:
+                path = os.path.join(data_dir, selected_file)
+                if os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        content = json.load(f)
+                        file_content = json.dumps(content, indent=4, ensure_ascii=False)
+                else:
+                    flash("파일을 찾을 수 없습니다.", "error")
+            except Exception as e:
+                flash(f"파일 읽기 실패: {e}", "error")
+
+    return render_template('data_file_viewer.html', files=files, selected_file=selected_file, file_content=file_content)
+
+@app.route('/data-files/delete', methods=['POST'])
+@login_required
+def delete_data_file():
+    filename = request.form.get('filename')
+    if not filename:
+        flash("파일명이 없습니다.", "error")
+        return redirect(url_for('data_file_viewer'))
+    
+    # Security check (Directory Traversal 방지)
+    if '..' in filename or '/' in filename or '\\' in filename:
+        flash("잘못된 파일명입니다.", "error")
+        return redirect(url_for('data_file_viewer'))
+        
+    try:
+        data_dir = os.path.join(basedir, 'data', 'custom_sources')
+        path = os.path.join(data_dir, filename)
+        if os.path.exists(path):
+            os.remove(path)
+            flash(f"파일 '{filename}'이(가) 삭제되었습니다.", "success")
+        else:
+            flash("파일을 찾을 수 없습니다.", "error")
+    except Exception as e:
+        flash(f"파일 삭제 실패: {e}", "error")
+    return redirect(url_for('data_file_viewer'))
+
+@login_required
+def mark_notification_read(notification_id):
+    try:
+        collector = get_collector()
+        with collector.engine.connect() as conn:
+            conn.execute(
+                text("UPDATE notifications SET is_read = 1 WHERE notification_id = :id"),
+                {'id': notification_id}
+            )
+            conn.commit()
+        flash("알림이 읽음 처리되었습니다.", "success")
+    except Exception as e:
+        flash(f"알림 처리 실패: {e}", "error")
+    return redirect(request.referrer or url_for('view_data', table_name='notifications'))
+
 @app.route('/simulator', methods=['GET', 'POST'])
 @login_required
 def simulator():
@@ -5493,11 +6309,51 @@ def user_stats_edit(user_id):
         flash(f"유저 스탯 수정 실패: {e}", 'error')
         return redirect(url_for('user_stats'))
 
+@app.route('/analytics')
+@login_required
+def analytics():
+    """Streamlit 대시보드를 Iframe으로 임베딩하여 보여주는 페이지"""
+    return render_template('streamlit_embed.html')
+
 # ==========================================================================
 # 실행
 # ==========================================================================
 
+streamlit_process = None
+
+def cleanup_streamlit():
+    """종료 시 Streamlit 서브프로세스 정리"""
+    global streamlit_process
+    if streamlit_process:
+        print("🛑 Stopping Streamlit Dashboard...")
+        streamlit_process.terminate()
+        try:
+            streamlit_process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            streamlit_process.kill()
+        streamlit_process = None
+
+def start_streamlit():
+    """Streamlit 대시보드를 서브프로세스로 실행"""
+    global streamlit_process
+    app_path = os.path.join(basedir, 'admin_app.py')
+    if os.path.exists(app_path):
+        print(f"🚀 Starting Streamlit Dashboard on http://localhost:8501")
+        # headless=true: 브라우저 자동 열림 방지 (Flask 내 임베딩용)
+        cmd = [
+            sys.executable, "-m", "streamlit", "run", app_path, 
+            "--server.port=8501", "--server.headless=true", "--server.address=127.0.0.1"
+        ]
+        streamlit_process = subprocess.Popen(cmd, cwd=basedir)
+        
+        # 프로그램 종료 시 정리 함수 등록
+        atexit.register(cleanup_streamlit)
+
 if __name__ == '__main__':
+    # Flask 리로더가 실행되기 전(메인 프로세스)에 Streamlit 실행
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        start_streamlit()
+
     # Flask의 리로더가 활성화된 경우 메인 프로세스에서만 스케줄러 실행
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         start_scheduler()

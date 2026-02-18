@@ -2,6 +2,7 @@
 {% block content %}
 <h1>금융 데이터 수집 관리</h1>
 
+<!-- [M3 Guide Card] 기능 설명 및 가이드 -->
 <div class="card guide-card">
     <div class="card-p">
         <div class="flex items-center gap-2 mb-2">
@@ -21,32 +22,60 @@
 
 <div class="info-banner">데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 데이터를 즉시 새로고침(수집)할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 새로고침 버튼도 비활성화됩니다.</div>
 
-<div class="dashboard-grid">
+<div class="flex justify-end mb-4">
+    <button onclick="openAddSourceModal()" class="btn-accent flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        새 수집기 추가
+    </button>
+</div>
+
+<div class="grid-2">
     {% for src in sources %}
-    <div class="card card-p">
+    <div class="card card-p relative {% if 'SUCCESS' in src.last_status %}border-success{% elif src.last_status == 'FAIL' %}border-danger{% endif %}">
+        <!-- Header & Toggle -->
         <div class="flex justify-between items-start mb-6 relative" style="z-index: 20;">
             <div>
-                <h3 class="card-title text-lg mb-1">{{ src.label }}</h3>
+                <h3 class="card-title text-lg mb-1 flex items-center gap-2">
+                    {{ src.label }}
+                    {% if src.enabled %}
+                        <span class="status-dot dot-success" title="활성 상태"></span>
+                    {% else %}
+                        <span class="status-dot dot-neutral" style="background-color: var(--text-muted);" title="비활성 상태"></span>
+                    {% endif %}
+                </h3>
                 <p class="text-xs text-muted">{{ src.api_desc }}</p>
             </div>
-            <form action="/toggle_collector" method="post" style="margin:0;">
-                <input type="hidden" name="source" value="{{ src.key }}">
-                <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
-                    <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }}>
-                    <span class="slider"></span>
-                </label>
-            </form>
+            <div class="flex items-center gap-2">
+                <form action="/toggle_collector" method="post" style="margin:0;">
+                    <input type="hidden" name="source" value="{{ src.key }}">
+                    <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
+                        <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }} aria-label="{{ src.label }} 수집기 토글">
+                        <span class="slider"></span>
+                    </label>
+                </form>
+                <!-- 삭제 버튼 -->
+                <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger hover:bg-red-50" title="수집기 삭제">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
         </div>
         
-        <!-- Status Grid -->
-        <div class="grid-3 gap-4 mb-6 p-4 bg-soft rounded-lg border">
+        <!-- Status Grid (M3 Surface Container High) -->
+        <div class="grid-4 gap-4 mb-6 p-4 bg-soft rounded-lg border">
             <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">상태</span>
+                <span class="text-xs text-muted font-medium uppercase tracking-wider">상태 (Status)</span>
                 <div class="flex items-center gap-2">
-                    <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">{{ src.last_status or '-' }}</span>
+                    <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' or 'SUCCESS' in src.last_status else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">
+                        {{ src.last_status or '대기중' }}
+                    </span>
+                    <!-- Manual Trigger Button -->
                     <form action="/trigger" method="post" class="inline-flex">
-                        <button type="submit" name="job" value="{{ src.trigger_val }}" title="데이터 새로고침" class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" {{ 'disabled' if not src.enabled else '' }} style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                        <button type="submit" name="job" value="{{ src.trigger_val }}" 
+                                title="데이터 새로고침 (즉시 실행)" 
+                                class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" 
+                                {{ 'disabled' if not src.enabled else '' }} 
+                                style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                         </button>
                     </form>
                 </div>
@@ -56,76 +85,70 @@
                 <span class="text-sm font-bold text-main font-mono">{{ src.last_run }}</span>
             </div>
             <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">누적 데이터</span>
-                <span class="text-sm font-bold text-primary font-mono">{{ src.total_count }}</span>
+                <span class="text-xs text-muted font-medium uppercase tracking-wider">다음 실행</span>
+                <span class="text-sm font-bold text-primary font-mono">{{ src.next_run }}</span>
             </div>
+            <a href="{{ url_for('view_data', table_name='collection_logs', search_col='target_source', search_val=src.log_source) }}" class="flex flex-col gap-1 text-decoration-none" style="text-decoration: none;" title="전체 로그 보기">
+                <div class="flex flex-col gap-1">
+                    <span class="text-xs text-muted font-medium uppercase tracking-wider">누적 데이터</span>
+                    <span class="text-sm font-bold text-primary font-mono">{{ src.total_count }}</span>
+                </div>
+            </a>
         </div>
 
-        <!-- Configuration -->
-        <form action="/collection-management/config" method="post" class="space-y-4">
+        <!-- Configuration Display (Read-Only) -->
+        <div class="space-y-4 relative" style="z-index: 20;">
+            <!-- API Endpoint (Read-only) -->
             <div>
-                <label class="form-label text-xs uppercase text-muted mb-2">API Key (인증키)</label>
+                <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
+                <input type="text" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly>
+            </div>
+
+            <!-- API Key Input -->
+            <div>
+                <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
                 <div class="relative">
-                    <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-soft pr-10">
-                    <span onclick="togglePassword('input_{{ src.key }}', this)" class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" title="키 보기/숨기기">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </span>
+                    <input type="password" value="{{ src.api_value }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly disabled>
                 </div>
                 <p class="help-text mt-1">해당 기관에서 발급받은 API Key가 있어야 데이터 수집이 가능합니다.</p>
             </div>
             
             <div class="grid-2 gap-4">
+                <!-- Frequency Selection (Chips) -->
                 <div>
                     <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
-                    <div class="radio-group">
+                    <div class="flex gap-2">
                         {% set f_val = src.freq_value %}
-                        {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
-                        
-                        {% for val, label in freq_options %}
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" 
-                                   {% if f_val == val %}checked{% endif %}>
-                            <span>{{ label }}</span>
-                        </label>
-                        {% endfor %}
+                        <span class="badge badge-neutral">{{ f_val|upper }}</span>
+                        {% if f_val == 'daily' and src.time_value %}<span class="text-sm text-sub">{{ src.time_value }}</span>{% endif %}
+                        {% if f_val == 'weekly' and src.weekday_value %}<span class="text-sm text-sub">{{ src.weekday_value|upper }}</span>{% endif %}
+                        {% if f_val == 'monthly' and src.day_value %}<span class="text-sm text-sub">Day {{ src.day_value }}</span>{% endif %}
                     </div>
                     <p class="help-text mt-1">데이터 갱신 빈도를 설정합니다.</p>
                 </div>
+                
+                <!-- Period Selection (Chips + Custom Input) -->
                 <div>
                     <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
-                    <div class="radio-group">
-                        {% set p_val = src.period_value | int %}
-                        {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
-                        {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
-                        
-                        {% for val, label in options %}
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}" 
-                                   onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                   {% if p_val == val %}checked{% endif %}>
-                            <span>{{ label }}</span>
-                        </label>
-                        {% endfor %}
-                        
-                        <label class="radio-chip">
-                            <input type="radio" name="{{ src.period_field }}_opt" value="custom" 
-                                   onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                   {% if is_custom %}checked{% endif %}>
-                            <span>기타</span>
-                        </label>
+                    <div class="flex gap-2">
+                        {% if src.period_value == '0' %}
+                            <span class="badge badge-neutral">전체</span>
+                        {% else %}
+                            <span class="badge badge-neutral">{{ src.period_value }}개월</span>
+                        {% endif %}
                     </div>
-                    <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" min="0" max="60" class="form-input text-sm w-full mt-2" style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
                     <p class="help-text mt-1">과거 데이터를 얼마나 가져올지 설정합니다. (0=전체)</p>
                 </div>
             </div>
 
             <div class="flex justify-end pt-2">
-                <button type="submit" class="btn-primary">
-                    설정 저장
+                <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.remove('hidden')" class="btn-tonal">
+                    설정 수정
                 </button>
             </div>
-        </form>
+        </div>
 
+        <!-- Disabled Overlay (M3 State Layer) -->
         {% if not src.enabled %}
         <div class="card-disabled-overlay">
             <div class="card-disabled-label">
@@ -135,6 +158,176 @@
         {% endif %}
     </div>
     {% endfor %}
+</div>
+
+{% for src in sources %}
+        <div id="editSourceModal_{{ src.key }}" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3>수집기 수정: {{ src.label }}</h3>
+                    <button onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="close-btn">&times;</button>
+                </div>
+                <form action="/collection-management/config" method="post" class="modal-body space-y-4">
+                    <!-- API Endpoint -->
+                    <div>
+                        <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
+                        <input type="text" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-input" placeholder="https://api.example.com/...">
+                    </div>
+
+                    <!-- API Key Input -->
+                    <div>
+                        <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
+                        <div class="relative">
+                            <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" 
+                                   placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-input pr-10">
+                            <span onclick="togglePassword('input_{{ src.key }}', this)" 
+                                  class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" 
+                                  title="키 보기/숨기기" role="button" tabindex="0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2 gap-4">
+                        <!-- Frequency Selection -->
+                        <div>
+                            <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
+                            <div class="radio-group">
+                                {% set f_val = src.freq_value %}
+                                {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
+                                {% for val, label in freq_options %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" {% if f_val == val %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Period Selection -->
+                        <div>
+                            <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
+                            <div class="radio-group">
+                                {% set p_val = src.period_value | int %}
+                                {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
+                                {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
+                                {% for val, label in options %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}" 
+                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                           {% if p_val == val %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                                <label class="radio-chip">
+                                    <input type="radio" name="{{ src.period_field }}_opt" value="custom" 
+                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                           {% if is_custom %}checked{% endif %}>
+                                    <span>기타</span>
+                                </label>
+                            </div>
+                            <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" 
+                                   min="0" max="60" class="form-input text-sm w-full mt-2" 
+                                   style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-light mt-4">
+                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal mr-2">취소</button>
+                        <button type="submit" class="btn-primary">설정 저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+{% endfor %}
+
+<!-- Add Source Modal -->
+<div id="addSourceModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>새 수집기 추가</h3>
+            <button onclick="closeAddSourceModal()" class="close-btn">&times;</button>
+        </div>
+        <form id="addSourceForm" action="/collection-management/add" method="post" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">수집기 이름 (Label) <span class="text-danger">*</span></label>
+                <input type="text" id="newSourceLabel" name="label" class="form-input" placeholder="예: 부동산 실거래가 수집">
+                <p id="labelError" class="text-xs text-danger mt-1" style="display: none;">수집기 이름을 입력해주세요.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">설명 (Description) <span class="text-danger">*</span></label>
+                <input type="text" id="newSourceDesc" name="description" class="form-input" placeholder="예: 국토부 API 연동">
+                <p id="descError" class="text-xs text-danger mt-1" style="display: none;">설명을 입력해주세요.</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">API Endpoint URL</label>
+                <input type="text" name="endpoint" class="form-input" placeholder="예: https://api.example.com/v1/data">
+            </div>
+            
+            <!-- Extended Configuration Fields -->
+            <div class="form-group">
+                <label class="form-label">API Key (인증키)</label>
+                <input type="password" name="api_key" class="form-input" placeholder="인증키 입력">
+            </div>
+            
+            <div class="grid-2 gap-4">
+                <div>
+                    <label class="form-label">수집 주기</label>
+                    <div class="radio-group">
+                        <label class="radio-chip"><input type="radio" name="frequency" value="daily" checked><span>매일</span></label>
+                        <label class="radio-chip"><input type="radio" name="frequency" value="weekly"><span>매주</span></label>
+                        <label class="radio-chip"><input type="radio" name="frequency" value="monthly"><span>매월</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">수집 기간</label>
+                    <div class="radio-group">
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="0" onchange="togglePeriodInput(this, 'new_period_input')" checked>
+                            <span>전체</span>
+                        </label>
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="1" onchange="togglePeriodInput(this, 'new_period_input')">
+                            <span>1개월</span>
+                        </label>
+                        <label class="radio-chip">
+                            <input type="radio" name="period_opt" value="custom" onchange="togglePeriodInput(this, 'new_period_input')">
+                            <span>기타</span>
+                        </label>
+                    </div>
+                    <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input text-sm w-full mt-2" style="display:none;" placeholder="개월 수 입력">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeAddSourceModal()" class="btn-tonal">취소</button>
+                <button type="button" onclick="submitAddSource()" class="btn-primary">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteSourceModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3 class="text-danger">수집기 삭제</h3>
+            <button onclick="closeDeleteSourceModal()" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warn-banner mb-4">
+                정말 <strong id="deleteTargetLabel"></strong> 수집기를 삭제하시겠습니까?<br>
+                삭제된 데이터와 설정은 복구할 수 없습니다.
+            </div>
+            <form id="deleteSourceForm" action="/collection-management/delete" method="post">
+                <input type="hidden" name="source_key" id="deleteSourceKey">
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeDeleteSourceModal()" class="btn-tonal">취소</button>
+                    <button type="submit" class="btn-outline-danger">삭제 확정</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -152,11 +345,57 @@ function togglePassword(inputId, iconSpan) {
     var input = document.getElementById(inputId);
     if (input.type === "password") {
         input.type = "text";
-        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
     } else {
         input.type = "password";
-        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
     }
+}
+
+function openAddSourceModal() {
+    document.getElementById('addSourceModal').classList.remove('hidden');
+    document.getElementById('newSourceLabel').value = '';
+    document.getElementById('newSourceDesc').value = '';
+    document.getElementById('newSourceLabel').classList.remove('border-danger');
+    document.getElementById('newSourceDesc').classList.remove('border-danger');
+    document.getElementById('labelError').style.display = 'none';
+    document.getElementById('descError').style.display = 'none';
+}
+function closeAddSourceModal() {
+    document.getElementById('addSourceModal').classList.add('hidden');
+}
+function submitAddSource() {
+    var labelInput = document.getElementById('newSourceLabel');
+    var descInput = document.getElementById('newSourceDesc');
+    var labelError = document.getElementById('labelError');
+    var descError = document.getElementById('descError');
+    var isValid = true;
+
+    labelInput.classList.remove('border-danger');
+    descInput.classList.remove('border-danger');
+    labelError.style.display = 'none';
+    descError.style.display = 'none';
+
+    if (!labelInput.value.trim()) {
+        labelInput.classList.add('border-danger');
+        labelError.style.display = 'block';
+        isValid = false;
+    }
+    if (!descInput.value.trim()) {
+        descInput.classList.add('border-danger');
+        descError.style.display = 'block';
+        isValid = false;
+    }
+    if (isValid) document.getElementById('addSourceForm').submit();
+}
+
+function openDeleteSourceModal(key, label) {
+    document.getElementById('deleteSourceKey').value = key;
+    document.getElementById('deleteTargetLabel').textContent = label;
+    document.getElementById('deleteSourceModal').classList.remove('hidden');
+}
+function closeDeleteSourceModal() {
+    document.getElementById('deleteSourceModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

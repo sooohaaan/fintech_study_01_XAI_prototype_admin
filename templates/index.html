@@ -115,22 +115,48 @@
 
                 const ctx = document.getElementById('logStatusChart').getContext('2d');
                 
+                // [M3 Style] CSS Variable Helper
+                const getCssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+                // [M3 Style] Tonal Palette Colors
+                const colorSuccess = getCssVar('--md-sys-color-primary') || '#E5AA70';
+                const colorError = getCssVar('--md-sys-color-error') || '#BA1A1A';
+                const colorSkipped = getCssVar('--md-sys-color-outline') || '#717171';
+                const colorEmpty = getCssVar('--md-sys-color-surface-variant') || '#E1E3E1';
+                const colorBg = getCssVar('--bg-card') || '#FFFFFF';
+
                 new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['Success', 'Fail', 'Skipped'],
                         datasets: [{
                             data: total === 0 ? [1] : [success, fail, skipped],
-                            backgroundColor: total === 0 ? ['#F3F4F6'] : ['#10B981', '#F43F5E', '#E5E7EB'],
-                            borderWidth: 0,
-                            hoverOffset: total === 0 ? 0 : 4
+                            backgroundColor: total === 0 ? [colorEmpty] : [colorSuccess, colorError, colorSkipped],
+                            borderWidth: 2,
+                            borderColor: colorBg,
+                            borderRadius: 20, // M3 Rounded Corners
+                            hoverOffset: total === 0 ? 0 : 8,
+                            spacing: 2
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: { legend: { display: false }, tooltip: { enabled: total > 0 } },
+                        cutout: '75%', // Thinner ring for modern look
+                        animation: { animateScale: true, animateRotate: true },
+                        plugins: { 
+                            legend: { display: false }, 
+                            tooltip: { 
+                                enabled: total > 0,
+                                backgroundColor: getCssVar('--md-sys-color-inverse-surface') || '#313033',
+                                titleColor: getCssVar('--md-sys-color-inverse-on-surface') || '#F4EFF4',
+                                bodyColor: getCssVar('--md-sys-color-inverse-on-surface') || '#F4EFF4',
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                usePointStyle: true
+                            } 
+                        },
                         onClick: (e, elements) => {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
@@ -149,6 +175,40 @@
         </script>
 
         <div class="dashboard-grid">
+            <!-- Card: Recent Users -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">최근 가입 회원</h3>
+                    <a href="/members" class="nav-btn" style="font-size: 0.75rem; padding: 4px 12px; height: 28px;">전체보기</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="w-full" style="font-size: 0.85rem; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">이름</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">ID</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">가입일</th>
+                                <th style="padding: 10px 16px; text-align: center; background: var(--bg-soft);">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in recent_users %}
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 10px 16px;"><strong>{{ u.user_name }}</strong></td>
+                                <td style="padding: 10px 16px;" class="text-muted">{{ u.user_id }}</td>
+                                <td style="padding: 10px 16px;">{{ u.join_date }}</td>
+                                <td style="padding: 10px 16px; text-align: center;">
+                                    <span class="badge {{ 'badge-success' if u.status == 'active' else 'badge-danger' if u.status == 'suspended' else 'badge-neutral' }}" style="font-size: 0.7rem;">{{ u.status }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted p-4">가입 회원이 없습니다.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Card 1: Loan -->
             <div class="card">
                 <div class="card-header">

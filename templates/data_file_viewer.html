@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>수집 데이터 파일 뷰어</h1>
+<div class="card guide-card">
+    <div class="card-p">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="badge badge-info">File Viewer</span>
+            <h3 class="font-bold text-sm">JSON 파일 뷰어</h3>
+        </div>
+        <p class="text-sm text-sub">
+            커스텀 수집기를 통해 저장된 JSON 파일들의 목록을 조회하고 내용을 확인합니다.
+        </p>
+    </div>
+</div>
+
+<div class="grid-1-2">
+    <div class="card card-p h-fit" style="max-height: 80vh; overflow-y: auto;">
+        <h3 class="card-title mt-0 mb-4">파일 목록</h3>
+        {% if files %}
+        <div class="flex flex-col gap-2">
+            {% for file in files %}
+            <div class="p-3 rounded-lg border {{ 'border-primary bg-soft' if file.name == selected_file else 'border-light hover:bg-soft' }} transition flex justify-between items-center group">
+                <a href="{{ url_for('data_file_viewer', file=file.name) }}" class="flex-1 text-decoration-none" style="text-decoration: none;">
+                    <div class="font-bold text-sm text-main mb-1">{{ file.name }}</div>
+                    <div class="flex justify-between text-xs text-muted">
+                        <span>{{ file.mtime }}</span>
+                        <span>{{ file.size }}</span>
+                    </div>
+                </a>
+                <form action="{{ url_for('delete_data_file') }}" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');" class="ml-2">
+                    <input type="hidden" name="filename" value="{{ file.name }}">
+                    <button type="submit" class="btn-icon text-danger hover:bg-red-50 p-1" title="파일 삭제">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">저장된 파일이 없습니다.</p>
+        {% endif %}
+    </div>
+    
+    <div class="card card-p h-fit">
+        <h3 class="card-title mt-0 mb-4">파일 내용: {{ selected_file or '선택된 파일 없음' }}</h3>
+        {% if file_content %}
+        <div class="bg-soft p-4 rounded-lg overflow-auto" style="max-height: 70vh;">
+            <pre class="text-xs font-mono m-0" style="white-space: pre-wrap; color: var(--text-main);">{{ file_content }}</pre>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-10 dashed-border rounded-lg">
+            왼쪽 목록에서 파일을 선택하여 내용을 확인하세요.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -93,6 +93,14 @@
                     <svg class="nav-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s 9-1.34 9-3V5"></path></svg>
                     데이터 조회
                 </a>
+                <a href="/data-files" class="nav-item {{ 'active' if request.endpoint == 'data_file_viewer' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    파일 뷰어
+                </a>
+                <a href="/analytics" class="nav-item {{ 'active' if request.endpoint == 'analytics' else '' }}">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                    분석 대시보드
+                </a>
             </div>
             <div class="sidebar-footer">
                 <button onclick="toggleDarkMode()" class="theme-toggle" title="다크모드 전환"><span id="theme-icon">🌙</span></button>
