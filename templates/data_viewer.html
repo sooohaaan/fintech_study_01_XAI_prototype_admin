@@ -62,12 +62,6 @@
                     <td>
                         {% if col in ['status', 'type', 'transaction_type', 'product_type'] %}
                             <span class="badge badge-neutral">{{ row[col] }}</span>
-                        {% elif col in ['message', 'error_message', 'description', 'memo', 'reason', 'api_desc'] and row[col] %}
-                            <div class="text-truncate" style="max-width: 300px; cursor: pointer; color: var(--text-main);" 
-                                 onclick="showLogMessage(this.getAttribute('data-msg'))" 
-                                 data-msg="{{ row[col] }}" title="클릭하여 전체 보기">
-                                {{ row[col] }}
-                            </div>
                         {% else %}
                             {{ row[col] }}
                         {% endif %}

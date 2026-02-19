@@ -54,7 +54,7 @@
                     </label>
                 </form>
                 <!-- 삭제 버튼 -->
-                <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger hover:bg-red-50" title="수집기 삭제">
+                <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger rounded-full" title="수집기 삭제">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             </div>
@@ -72,10 +72,9 @@
                     <form action="/trigger" method="post" class="inline-flex">
                         <button type="submit" name="job" value="{{ src.trigger_val }}" 
                                 title="데이터 새로고침 (즉시 실행)" 
-                                class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" 
-                                {{ 'disabled' if not src.enabled else '' }} 
-                                style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                                class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}"
+                                {{ 'disabled' if not src.enabled else '' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                         </button>
                     </form>
                 </div>
@@ -163,35 +162,32 @@
 {% for src in sources %}
         <div id="editSourceModal_{{ src.key }}" class="modal-overlay hidden">
             <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3>수집기 수정: {{ src.label }}</h3>
+                <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                    <h3 class="text-lg font-medium">수집기 수정: {{ src.label }}</h3>
                     <button onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="close-btn">&times;</button>
                 </div>
-                <form action="/collection-management/config" method="post" class="modal-body space-y-4">
+                <form action="/collection-management/config" method="post" class="modal-body space-y-6">
                     <!-- API Endpoint -->
-                    <div>
-                        <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
-                        <input type="text" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-input" placeholder="https://api.example.com/...">
+                    <div class="m3-text-field">
+                        <input type="text" id="endpoint_{{ src.key }}" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-input" placeholder=" ">
+                        <label for="endpoint_{{ src.key }}" class="form-label">API Endpoint</label>
                     </div>
 
                     <!-- API Key Input -->
-                    <div>
-                        <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
-                        <div class="relative">
-                            <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" 
-                                   placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-input pr-10">
-                            <span onclick="togglePassword('input_{{ src.key }}', this)" 
-                                  class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" 
-                                  title="키 보기/숨기기" role="button" tabindex="0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            </span>
-                        </div>
+                    <div class="m3-text-field">
+                        <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" 
+                               placeholder=" " class="form-input text-sm w-full font-mono bg-input pr-10">
+                        <label for="input_{{ src.key }}" class="form-label">API Key (인증키)</label>
+                        <span onclick="togglePassword('input_{{ src.key }}', this)" 
+                              class="password-toggle-icon" title="키 보기/숨기기" role="button" tabindex="0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </span>
                     </div>
                     
                     <div class="grid-2 gap-4">
                         <!-- Frequency Selection -->
                         <div>
-                            <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
+                            <label class="form-label">수집 주기</label>
                             <div class="radio-group">
                                 {% set f_val = src.freq_value %}
                                 {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
@@ -206,7 +202,7 @@
                         
                         <!-- Period Selection -->
                         <div>
-                            <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
+                            <label class="form-label">수집 기간</label>
                             <div class="radio-group">
                                 {% set p_val = src.period_value | int %}
                                 {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
@@ -226,15 +222,17 @@
                                     <span>기타</span>
                                 </label>
                             </div>
-                            <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" 
-                                   min="0" max="60" class="form-input text-sm w-full mt-2" 
-                                   style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+                            <div class="m3-text-field mt-2" style="{{ 'display:none;' if not is_custom else '' }}">
+                                <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" 
+                                       min="0" max="60" class="form-input text-sm w-full" placeholder=" ">
+                                <label for="{{ src.period_field }}" class="form-label">개월 수 입력</label>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-end pt-4 border-t border-light mt-4">
-                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal mr-2">취소</button>
-                        <button type="submit" class="btn-primary">설정 저장</button>
+                    <div class="flex justify-end pt-6 gap-2">
+                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal">취소</button>
+                        <button type="submit" class="btn-accent">설정 저장</button>
                     </div>
                 </form>
             </div>
@@ -248,26 +246,26 @@
             <h3>새 수집기 추가</h3>
             <button onclick="closeAddSourceModal()" class="close-btn">&times;</button>
         </div>
-        <form id="addSourceForm" action="/collection-management/add" method="post" class="modal-body">
-            <div class="form-group">
-                <label class="form-label">수집기 이름 (Label) <span class="text-danger">*</span></label>
-                <input type="text" id="newSourceLabel" name="label" class="form-input" placeholder="예: 부동산 실거래가 수집">
-                <p id="labelError" class="text-xs text-danger mt-1" style="display: none;">수집기 이름을 입력해주세요.</p>
+        <form id="addSourceForm" action="/collection-management/add" method="post" class="modal-body space-y-2">
+            <div class="m3-text-field">
+                <input type="text" id="newSourceLabel" name="label" class="form-input" placeholder=" ">
+                <label for="newSourceLabel" class="form-label">수집기 이름 (Label) <span class="text-danger">*</span></label>
             </div>
-            <div class="form-group">
-                <label class="form-label">설명 (Description) <span class="text-danger">*</span></label>
-                <input type="text" id="newSourceDesc" name="description" class="form-input" placeholder="예: 국토부 API 연동">
-                <p id="descError" class="text-xs text-danger mt-1" style="display: none;">설명을 입력해주세요.</p>
+            <p id="labelError" class="help-text text-danger" style="display: none;">수집기 이름을 입력해주세요.</p>
+
+            <div class="m3-text-field">
+                <input type="text" id="newSourceDesc" name="description" class="form-input" placeholder=" ">
+                <label for="newSourceDesc" class="form-label">설명 (Description) <span class="text-danger">*</span></label>
             </div>
-            <div class="form-group">
-                <label class="form-label">API Endpoint URL</label>
-                <input type="text" name="endpoint" class="form-input" placeholder="예: https://api.example.com/v1/data">
+            <p id="descError" class="help-text text-danger" style="display: none;">설명을 입력해주세요.</p>
+
+            <div class="m3-text-field">
+                <input type="text" id="newSourceEndpoint" name="endpoint" class="form-input" placeholder=" ">
+                <label for="newSourceEndpoint" class="form-label">API Endpoint URL</label>
             </div>
-            
-            <!-- Extended Configuration Fields -->
-            <div class="form-group">
-                <label class="form-label">API Key (인증키)</label>
-                <input type="password" name="api_key" class="form-input" placeholder="인증키 입력">
+            <div class="m3-text-field">
+                <input type="password" id="newSourceApiKey" name="api_key" class="form-input" placeholder=" ">
+                <label for="newSourceApiKey" class="form-label">API Key (인증키)</label>
             </div>
             
             <div class="grid-2 gap-4">
@@ -295,13 +293,16 @@
                             <span>기타</span>
                         </label>
                     </div>
-                    <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input text-sm w-full mt-2" style="display:none;" placeholder="개월 수 입력">
+                    <div class="m3-text-field mt-2" style="display:none;" id="new_period_input_container">
+                        <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input text-sm w-full" placeholder=" ">
+                        <label for="new_period_input" class="form-label">개월 수 입력</label>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 mt-4">
+            <div class="flex justify-end gap-2 pt-4">
                 <button type="button" onclick="closeAddSourceModal()" class="btn-tonal">취소</button>
-                <button type="button" onclick="submitAddSource()" class="btn-primary">추가</button>
+                <button type="button" onclick="submitAddSource()" class="btn-accent">추가</button>
             </div>
         </form>
     </div>
@@ -332,13 +333,14 @@
 
 <script>
 function togglePeriodInput(radio, targetId) {
-    var input = document.getElementById(targetId);
+    var inputContainer = document.getElementById(targetId + '_container');
+    var inputEl = document.getElementById(targetId);
     if (radio.value === 'custom') {
-        input.style.display = 'block';
-        input.focus();
+        if (inputContainer) inputContainer.style.display = 'block';
+        if (inputEl) inputEl.focus();
     } else {
-        input.style.display = 'none';
-        input.value = radio.value;
+        if (inputContainer) inputContainer.style.display = 'none';
+        if (inputEl) inputEl.value = radio.value;
     }
 }
 function togglePassword(inputId, iconSpan) {
