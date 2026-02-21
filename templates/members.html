@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, status_badge, empty_state %}
 {% block content %}
 <h1>회원 관리</h1>
 
@@ -17,19 +17,15 @@
 ], "mb-6", title="회원 현황", badge="Members") }}
 
 <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
-    <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
-        <input type="text" name="search_name" value="{{ search_name }}" placeholder="회원 이름으로 검색..." class="form-input w-auto min-w-150">
-        <select name="search_status" class="form-select w-auto">
-            <option value="">전체 상태</option>
-            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
-            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
-            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
-        </select>
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search_name or search_status %}
-        <a href="/members" class="nav-btn">초기화</a>
-        {% endif %}
-    </form>
+    {{ filter_form([
+        {"type": "text", "name": "search_name", "value": search_name, "placeholder": "회원 이름으로 검색...", "extra_class": "min-w-150"},
+        {"type": "select", "name": "search_status", "value": search_status, "options": [
+            {"value": "", "label": "전체 상태"},
+            {"value": "active", "label": "활성"},
+            {"value": "suspended", "label": "정지"},
+            {"value": "withdrawn", "label": "탈퇴"}
+        ]}
+    ], action="/members", reset_url="/members", show_reset=search_name or search_status) }}
     <a href="/members/add" class="btn-accent">회원 추가</a>
 </div>
 

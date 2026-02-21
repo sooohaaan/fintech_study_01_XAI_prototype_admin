@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, empty_state, pagination %}
+{% from "macros.html" import guide_card, filter_form, empty_state, pagination %}
 {% block content %}
     <h1>수집 데이터 조회: {{ table_name }}</h1>
 
@@ -22,15 +22,11 @@
         <a href="/data/users" class="nav-btn {{ 'active' if table_name == 'users' else '' }}">회원</a>
         <a href="/data/notifications" class="nav-btn {{ 'active' if table_name == 'notifications' else '' }}">알림</a>
     </div>
-    <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-        <span class="font-semibold text-sub">검색:</span>
-        <select name="search_col" class="form-select w-auto">
-            {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
-        </select>
-        <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력" class="form-input flex-1 min-w-200">
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" class="nav-btn">초기화</a>{% endif %}
-    </form>
+    {{ filter_form([
+        {"type": "select_dynamic", "name": "search_col", "value": search_col, "options": columns},
+        {"type": "text", "name": "search_val", "value": search_val if search_val else '', "placeholder": "검색어 입력", "extra_class": "flex-1 min-w-200"}
+    ], action=url_for('view_data', table_name=table_name), label="검색:",
+       reset_url=url_for('view_data', table_name=table_name), show_reset=search_val, extra_class="mb-4") }}
     <div class="table-wrapper">
         <table class="w-full">
             <thead><tr>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, status_badge, empty_state, pagination %}
 {% block content %}
 <div class="flex justify-between items-center mb-2">
     <h1>미션 관리</h1>
@@ -78,35 +78,31 @@
     </div>
 </div>
 
-<form method="get" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">필터:</span>
-    <select name="status_filter" class="form-select w-auto">
-        <option value="">전체 상태</option>
-        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>대기 (pending)</option>
-        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>진행 (in_progress)</option>
-        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>완료 (completed)</option>
-        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료 (expired)</option>
-        <option value="given_up" {% if status_filter == 'given_up' %}selected{% endif %}>포기 (given_up)</option>
-    </select>
-    <select name="type_filter" class="form-select w-auto">
-        <option value="">전체 유형</option>
-        <option value="savings" {% if type_filter == 'savings' %}selected{% endif %}>savings (저축)</option>
-        <option value="spending" {% if type_filter == 'spending' %}selected{% endif %}>spending (지출 절감)</option>
-        <option value="credit" {% if type_filter == 'credit' %}selected{% endif %}>credit (신용 관리)</option>
-        <option value="investment" {% if type_filter == 'investment' %}selected{% endif %}>investment (투자)</option>
-        <option value="lifestyle" {% if type_filter == 'lifestyle' %}selected{% endif %}>lifestyle (생활 습관)</option>
-    </select>
-    <select name="difficulty_filter" class="form-select w-auto">
-        <option value="">전체 난이도</option>
-        <option value="easy" {% if difficulty_filter == 'easy' %}selected{% endif %}>easy (쉬움)</option>
-        <option value="medium" {% if difficulty_filter == 'medium' %}selected{% endif %}>medium (보통)</option>
-        <option value="hard" {% if difficulty_filter == 'hard' %}selected{% endif %}>hard (어려움)</option>
-    </select>
-    <button type="submit" class="btn-primary">적용</button>
-    {% if status_filter or type_filter or difficulty_filter %}
-        <a href="/missions" class="nav-btn">초기화</a>
-    {% endif %}
-</form>
+{{ filter_form([
+    {"type": "select", "name": "status_filter", "value": status_filter, "options": [
+        {"value": "", "label": "전체 상태"},
+        {"value": "pending", "label": "대기 (pending)"},
+        {"value": "in_progress", "label": "진행 (in_progress)"},
+        {"value": "completed", "label": "완료 (completed)"},
+        {"value": "expired", "label": "만료 (expired)"},
+        {"value": "given_up", "label": "포기 (given_up)"}
+    ]},
+    {"type": "select", "name": "type_filter", "value": type_filter, "options": [
+        {"value": "", "label": "전체 유형"},
+        {"value": "savings", "label": "savings (저축)"},
+        {"value": "spending", "label": "spending (지출 절감)"},
+        {"value": "credit", "label": "credit (신용 관리)"},
+        {"value": "investment", "label": "investment (투자)"},
+        {"value": "lifestyle", "label": "lifestyle (생활 습관)"}
+    ]},
+    {"type": "select", "name": "difficulty_filter", "value": difficulty_filter, "options": [
+        {"value": "", "label": "전체 난이도"},
+        {"value": "easy", "label": "easy (쉬움)"},
+        {"value": "medium", "label": "medium (보통)"},
+        {"value": "hard", "label": "hard (어려움)"}
+    ]}
+], label="필터:", submit_label="적용", submit_class="btn-primary",
+   reset_url="/missions", show_reset=status_filter or type_filter or difficulty_filter, extra_class="mb-4") }}
 
 <form method="post" id="bulkForm">
     <input type="hidden" name="change_reason" id="hidden_change_reason">

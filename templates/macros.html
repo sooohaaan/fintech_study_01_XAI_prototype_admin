@@ -29,6 +29,22 @@
 
 {% macro empty_state(colspan, message) %}<tr><td colspan="{{ colspan }}" class="text-center text-sub p-4">{{ message }}</td></tr>{% endmacro %}
 
+{% macro filter_form(fields, action="", label="", submit_label="검색", submit_class="btn-accent", reset_url="", show_reset=false, reset_label="초기화", extra_class="") %}
+<form method="get"{% if action %} action="{{ action }}"{% endif %} class="bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4 {{ extra_class }}">
+    {% if label %}<span class="font-semibold text-sub">{{ label }}</span>{% endif %}
+    {% for field in fields %}
+        {% if field.type == "text" %}<input type="text" name="{{ field.name }}" value="{{ field.value }}" placeholder="{{ field.placeholder if field.placeholder else '' }}" class="form-input w-auto {{ field.extra_class if field.extra_class else '' }}">
+        {% elif field.type == "date" %}<input type="date" name="{{ field.name }}" value="{{ field.value if field.value else '' }}" class="form-input w-auto">
+        {% elif field.type == "separator" %}<span class="text-sub">{{ field.text }}</span>
+        {% elif field.type == "select" %}<select name="{{ field.name }}" class="form-select w-auto">{% for opt in field.options %}<option value="{{ opt.value }}" {% if field.value == opt.value %}selected{% endif %}>{{ opt.label }}</option>{% endfor %}</select>
+        {% elif field.type == "select_dynamic" %}<select name="{{ field.name }}" class="form-select w-auto">{% for opt in field.options %}<option value="{{ opt }}" {% if field.value == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}</select>
+        {% endif %}
+    {% endfor %}
+    <button type="submit" class="{{ submit_class }}">{{ submit_label }}</button>
+    {% if show_reset and reset_url %}<a href="{{ reset_url }}" class="nav-btn">{{ reset_label }}</a>{% endif %}
+</form>
+{% endmacro %}
+
 {% macro pagination(page, total_pages, prev_url, next_url, total_count="") %}
 <div class="flex justify-between items-center mt-4">
     {% if page > 1 %}<a href="{{ prev_url }}" class="nav-btn">이전</a>

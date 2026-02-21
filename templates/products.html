@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination %}
 {% block content %}
 <h1>대출 상품 관리</h1>
 
@@ -16,13 +16,9 @@
     {"label": "비노출", "value": hidden_count, "color": "danger"}
 ], "mb-6", title="상품 현황", badge="Products") }}
 
-<div class="flex justify-between items-center mb-6 flex-wrap gap-2">
-    <form method="get" class="flex gap-2 items-center flex-wrap">
-        <input type="text" name="search" value="{{ search }}" placeholder="은행 또는 상품명 검색..." class="form-input w-auto min-w-200">
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search %}<a href="/products" class="nav-btn">초기화</a>{% endif %}
-    </form>
-</div>
+{{ filter_form([
+    {"type": "text", "name": "search", "value": search, "placeholder": "은행 또는 상품명 검색...", "extra_class": "min-w-200"}
+], reset_url="/products", show_reset=search, extra_class="mb-6") }}
 
 <div class="table-wrapper">
     <table class="w-full">

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination %}
 {% block content %}
 <h1>포인트 생애주기 관리</h1>
 
@@ -11,15 +11,13 @@
         {"title": "소멸/회수", "desc": "유효기간 만료 또는 어뷰징 적발 시 포인트를 회수해 총 유통량을 조절합니다."}
     ]) }}
 
-<form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">기간 설정:</span>
-    <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-input w-auto">
-    <span class="text-sub">~</span>
-    <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-input w-auto">
-    <input type="text" name="search_user" value="{{ search_user }}" placeholder="유저 ID 검색" class="form-input w-auto">
-    <button type="submit" class="btn-primary">조회</button>
-    <a href="/points" class="nav-btn">전체 기간</a>
-</form>
+{{ filter_form([
+    {"type": "date", "name": "start_date", "value": start_date},
+    {"type": "separator", "text": "~"},
+    {"type": "date", "name": "end_date", "value": end_date},
+    {"type": "text", "name": "search_user", "value": search_user, "placeholder": "유저 ID 검색"}
+], label="기간 설정:", submit_label="조회", submit_class="btn-primary",
+   reset_url="/points", show_reset=true, reset_label="전체 기간", extra_class="mb-6") }}
 
 {% set clawback_help = "회수: " ~ "{:,}".format(total_clawback) ~ " / 소멸: " ~ "{:,}".format(total_expired) %}
 {{ summary_grid([

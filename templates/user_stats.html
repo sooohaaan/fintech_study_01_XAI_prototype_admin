@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, empty_state %}
+{% from "macros.html" import guide_card, filter_form, empty_state %}
 {% block content %}
 <h1>유저 스탯 관리</h1>
 {{ guide_card("Data Management", "유저 금융 데이터 관리",
@@ -9,14 +9,12 @@
         {"title": "데이터 수정", "desc": "검토 후 필요한 항목을 직접 수정합니다."}
     ]) }}
 
-<form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">기간 설정:</span>
-    <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-input w-auto">
-    <span class="text-sub">~</span>
-    <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-input w-auto">
-    <button type="submit" class="btn-primary">조회</button>
-    <a href="/missions/deletion-logs" class="nav-btn">전체 기간</a>
-</form>
+{{ filter_form([
+    {"type": "date", "name": "start_date", "value": start_date},
+    {"type": "separator", "text": "~"},
+    {"type": "date", "name": "end_date", "value": end_date}
+], label="기간 설정:", submit_label="조회", submit_class="btn-primary",
+   reset_url="/missions/deletion-logs", show_reset=true, reset_label="전체 기간", extra_class="mb-6") }}
 
 <div class="table-wrapper">
     <table class="w-full">

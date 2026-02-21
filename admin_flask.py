@@ -772,6 +772,22 @@ templates_to_create = {
 
 {% macro empty_state(colspan, message) %}<tr><td colspan="{{ colspan }}" class="text-center text-sub p-4">{{ message }}</td></tr>{% endmacro %}
 
+{% macro filter_form(fields, action="", label="", submit_label="검색", submit_class="btn-accent", reset_url="", show_reset=false, reset_label="초기화", extra_class="") %}
+<form method="get"{% if action %} action="{{ action }}"{% endif %} class="bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4 {{ extra_class }}">
+    {% if label %}<span class="font-semibold text-sub">{{ label }}</span>{% endif %}
+    {% for field in fields %}
+        {% if field.type == "text" %}<input type="text" name="{{ field.name }}" value="{{ field.value }}" placeholder="{{ field.placeholder if field.placeholder else '' }}" class="form-input w-auto {{ field.extra_class if field.extra_class else '' }}">
+        {% elif field.type == "date" %}<input type="date" name="{{ field.name }}" value="{{ field.value if field.value else '' }}" class="form-input w-auto">
+        {% elif field.type == "separator" %}<span class="text-sub">{{ field.text }}</span>
+        {% elif field.type == "select" %}<select name="{{ field.name }}" class="form-select w-auto">{% for opt in field.options %}<option value="{{ opt.value }}" {% if field.value == opt.value %}selected{% endif %}>{{ opt.label }}</option>{% endfor %}</select>
+        {% elif field.type == "select_dynamic" %}<select name="{{ field.name }}" class="form-select w-auto">{% for opt in field.options %}<option value="{{ opt }}" {% if field.value == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}</select>
+        {% endif %}
+    {% endfor %}
+    <button type="submit" class="{{ submit_class }}">{{ submit_label }}</button>
+    {% if show_reset and reset_url %}<a href="{{ reset_url }}" class="nav-btn">{{ reset_label }}</a>{% endif %}
+</form>
+{% endmacro %}
+
 {% macro pagination(page, total_pages, prev_url, next_url, total_count="") %}
 <div class="flex justify-between items-center mt-4">
     {% if page > 1 %}<a href="{{ prev_url }}" class="nav-btn">이전</a>
@@ -1948,7 +1964,7 @@ function syncFromNum(which) {
 </form>
 {% endblock %}""",
     'products.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination %}
 {% block content %}
 <h1>대출 상품 관리</h1>
 
@@ -1965,13 +1981,9 @@ function syncFromNum(which) {
     {"label": "비노출", "value": hidden_count, "color": "danger"}
 ], "mb-6", title="상품 현황", badge="Products") }}
 
-<div class="flex justify-between items-center mb-6 flex-wrap gap-2">
-    <form method="get" class="flex gap-2 items-center flex-wrap">
-        <input type="text" name="search" value="{{ search }}" placeholder="은행 또는 상품명 검색..." class="form-input w-auto min-w-200">
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search %}<a href="/products" class="nav-btn">초기화</a>{% endif %}
-    </form>
-</div>
+{{ filter_form([
+    {"type": "text", "name": "search", "value": search, "placeholder": "은행 또는 상품명 검색...", "extra_class": "min-w-200"}
+], reset_url="/products", show_reset=search, extra_class="mb-6") }}
 
 <div class="table-wrapper">
     <table class="w-full">
@@ -2026,7 +2038,7 @@ function syncFromNum(which) {
     url_for('products', page=page+1, search=search)) }}
 {% endblock %}""",
     'missions.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, status_badge, empty_state, pagination %}
 {% block content %}
 <div class="flex justify-between items-center mb-2">
     <h1>미션 관리</h1>
@@ -2105,35 +2117,31 @@ function syncFromNum(which) {
     </div>
 </div>
 
-<form method="get" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">필터:</span>
-    <select name="status_filter" class="form-select w-auto">
-        <option value="">전체 상태</option>
-        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>대기 (pending)</option>
-        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>진행 (in_progress)</option>
-        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>완료 (completed)</option>
-        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>만료 (expired)</option>
-        <option value="given_up" {% if status_filter == 'given_up' %}selected{% endif %}>포기 (given_up)</option>
-    </select>
-    <select name="type_filter" class="form-select w-auto">
-        <option value="">전체 유형</option>
-        <option value="savings" {% if type_filter == 'savings' %}selected{% endif %}>savings (저축)</option>
-        <option value="spending" {% if type_filter == 'spending' %}selected{% endif %}>spending (지출 절감)</option>
-        <option value="credit" {% if type_filter == 'credit' %}selected{% endif %}>credit (신용 관리)</option>
-        <option value="investment" {% if type_filter == 'investment' %}selected{% endif %}>investment (투자)</option>
-        <option value="lifestyle" {% if type_filter == 'lifestyle' %}selected{% endif %}>lifestyle (생활 습관)</option>
-    </select>
-    <select name="difficulty_filter" class="form-select w-auto">
-        <option value="">전체 난이도</option>
-        <option value="easy" {% if difficulty_filter == 'easy' %}selected{% endif %}>easy (쉬움)</option>
-        <option value="medium" {% if difficulty_filter == 'medium' %}selected{% endif %}>medium (보통)</option>
-        <option value="hard" {% if difficulty_filter == 'hard' %}selected{% endif %}>hard (어려움)</option>
-    </select>
-    <button type="submit" class="btn-primary">적용</button>
-    {% if status_filter or type_filter or difficulty_filter %}
-        <a href="/missions" class="nav-btn">초기화</a>
-    {% endif %}
-</form>
+{{ filter_form([
+    {"type": "select", "name": "status_filter", "value": status_filter, "options": [
+        {"value": "", "label": "전체 상태"},
+        {"value": "pending", "label": "대기 (pending)"},
+        {"value": "in_progress", "label": "진행 (in_progress)"},
+        {"value": "completed", "label": "완료 (completed)"},
+        {"value": "expired", "label": "만료 (expired)"},
+        {"value": "given_up", "label": "포기 (given_up)"}
+    ]},
+    {"type": "select", "name": "type_filter", "value": type_filter, "options": [
+        {"value": "", "label": "전체 유형"},
+        {"value": "savings", "label": "savings (저축)"},
+        {"value": "spending", "label": "spending (지출 절감)"},
+        {"value": "credit", "label": "credit (신용 관리)"},
+        {"value": "investment", "label": "investment (투자)"},
+        {"value": "lifestyle", "label": "lifestyle (생활 습관)"}
+    ]},
+    {"type": "select", "name": "difficulty_filter", "value": difficulty_filter, "options": [
+        {"value": "", "label": "전체 난이도"},
+        {"value": "easy", "label": "easy (쉬움)"},
+        {"value": "medium", "label": "medium (보통)"},
+        {"value": "hard", "label": "hard (어려움)"}
+    ]}
+], label="필터:", submit_label="적용", submit_class="btn-primary",
+   reset_url="/missions", show_reset=status_filter or type_filter or difficulty_filter, extra_class="mb-4") }}
 
 <form method="post" id="bulkForm">
     <input type="hidden" name="change_reason" id="hidden_change_reason">
@@ -2553,7 +2561,7 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'points.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination %}
 {% block content %}
 <h1>포인트 생애주기 관리</h1>
 
@@ -2565,15 +2573,13 @@ function submitBulkDelete() {
         {"title": "소멸/회수", "desc": "유효기간 만료 또는 어뷰징 적발 시 포인트를 회수해 총 유통량을 조절합니다."}
     ]) }}
 
-<form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">기간 설정:</span>
-    <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-input w-auto">
-    <span class="text-sub">~</span>
-    <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-input w-auto">
-    <input type="text" name="search_user" value="{{ search_user }}" placeholder="유저 ID 검색" class="form-input w-auto">
-    <button type="submit" class="btn-primary">조회</button>
-    <a href="/points" class="nav-btn">전체 기간</a>
-</form>
+{{ filter_form([
+    {"type": "date", "name": "start_date", "value": start_date},
+    {"type": "separator", "text": "~"},
+    {"type": "date", "name": "end_date", "value": end_date},
+    {"type": "text", "name": "search_user", "value": search_user, "placeholder": "유저 ID 검색"}
+], label="기간 설정:", submit_label="조회", submit_class="btn-primary",
+   reset_url="/points", show_reset=true, reset_label="전체 기간", extra_class="mb-6") }}
 
 {% set clawback_help = "회수: " ~ "{:,}".format(total_clawback) ~ " / 소멸: " ~ "{:,}".format(total_expired) %}
 {{ summary_grid([
@@ -2850,7 +2856,7 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'members.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, status_badge, empty_state %}
 {% block content %}
 <h1>회원 관리</h1>
 
@@ -2868,19 +2874,15 @@ function submitBulkDelete() {
 ], "mb-6", title="회원 현황", badge="Members") }}
 
 <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
-    <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
-        <input type="text" name="search_name" value="{{ search_name }}" placeholder="회원 이름으로 검색..." class="form-input w-auto min-w-150">
-        <select name="search_status" class="form-select w-auto">
-            <option value="">전체 상태</option>
-            <option value="active" {% if search_status == 'active' %}selected{% endif %}>활성</option>
-            <option value="suspended" {% if search_status == 'suspended' %}selected{% endif %}>정지</option>
-            <option value="withdrawn" {% if search_status == 'withdrawn' %}selected{% endif %}>탈퇴</option>
-        </select>
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search_name or search_status %}
-        <a href="/members" class="nav-btn">초기화</a>
-        {% endif %}
-    </form>
+    {{ filter_form([
+        {"type": "text", "name": "search_name", "value": search_name, "placeholder": "회원 이름으로 검색...", "extra_class": "min-w-150"},
+        {"type": "select", "name": "search_status", "value": search_status, "options": [
+            {"value": "", "label": "전체 상태"},
+            {"value": "active", "label": "활성"},
+            {"value": "suspended", "label": "정지"},
+            {"value": "withdrawn", "label": "탈퇴"}
+        ]}
+    ], action="/members", reset_url="/members", show_reset=search_name or search_status) }}
     <a href="/members/add" class="btn-accent">회원 추가</a>
 </div>
 
@@ -3110,7 +3112,7 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'data_viewer.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, empty_state, pagination %}
+{% from "macros.html" import guide_card, filter_form, empty_state, pagination %}
 {% block content %}
     <h1>수집 데이터 조회: {{ table_name }}</h1>
 
@@ -3133,15 +3135,11 @@ function submitBulkDelete() {
         <a href="/data/users" class="nav-btn {{ 'active' if table_name == 'users' else '' }}">회원</a>
         <a href="/data/notifications" class="nav-btn {{ 'active' if table_name == 'notifications' else '' }}">알림</a>
     </div>
-    <form method="get" action="{{ url_for('view_data', table_name=table_name) }}" class="mb-4 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-        <span class="font-semibold text-sub">검색:</span>
-        <select name="search_col" class="form-select w-auto">
-            {% for col in columns %}<option value="{{ col }}" {% if search_col == col %}selected{% endif %}>{{ col }}</option>{% endfor %}
-        </select>
-        <input type="text" name="search_val" value="{{ search_val if search_val else '' }}" placeholder="검색어 입력" class="form-input flex-1 min-w-200">
-        <button type="submit" class="btn-accent">검색</button>
-        {% if search_val %}<a href="{{ url_for('view_data', table_name=table_name) }}" class="nav-btn">초기화</a>{% endif %}
-    </form>
+    {{ filter_form([
+        {"type": "select_dynamic", "name": "search_col", "value": search_col, "options": columns},
+        {"type": "text", "name": "search_val", "value": search_val if search_val else '', "placeholder": "검색어 입력", "extra_class": "flex-1 min-w-200"}
+    ], action=url_for('view_data', table_name=table_name), label="검색:",
+       reset_url=url_for('view_data', table_name=table_name), show_reset=search_val, extra_class="mb-4") }}
     <div class="table-wrapper">
         <table class="w-full">
             <thead><tr>
@@ -3236,7 +3234,7 @@ function submitBulkDelete() {
     </div>
 {% endblock %}""",
     'user_stats.html': """{% extends "base.html" %}
-{% from "macros.html" import guide_card, empty_state %}
+{% from "macros.html" import guide_card, filter_form, empty_state %}
 {% block content %}
 <h1>유저 스탯 관리</h1>
 {{ guide_card("Data Management", "유저 금융 데이터 관리",
@@ -3246,14 +3244,12 @@ function submitBulkDelete() {
         {"title": "데이터 수정", "desc": "검토 후 필요한 항목을 직접 수정합니다."}
     ]) }}
 
-<form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
-    <span class="font-semibold text-sub">기간 설정:</span>
-    <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-input w-auto">
-    <span class="text-sub">~</span>
-    <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-input w-auto">
-    <button type="submit" class="btn-primary">조회</button>
-    <a href="/missions/deletion-logs" class="nav-btn">전체 기간</a>
-</form>
+{{ filter_form([
+    {"type": "date", "name": "start_date", "value": start_date},
+    {"type": "separator", "text": "~"},
+    {"type": "date", "name": "end_date", "value": end_date}
+], label="기간 설정:", submit_label="조회", submit_class="btn-primary",
+   reset_url="/missions/deletion-logs", show_reset=true, reset_label="전체 기간", extra_class="mb-6") }}
 
 <div class="table-wrapper">
     <table class="w-full">
