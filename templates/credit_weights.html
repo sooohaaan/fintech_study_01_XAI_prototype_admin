@@ -14,49 +14,61 @@
 
 <form method="post">
     <!-- 섹션 1: 핵심 가중치 -->
-    <div class="card card-p mb-6">
-        <h3 class="card-title text-primary mt-0">핵심 가중치 (합계 = 1.0)</h3>
-        <div class="grid-3 mb-4">
-            <div>
+    <div class="card card-p card-static mb-6">
+        <div class="flex items-center gap-2 mb-5">
+            <span class="badge badge-info">Weights</span>
+            <h3 class="font-bold text-sm">핵심 가중치 (합계 = 1.0)</h3>
+        </div>
+        <!-- 합계 표시 + 비율 바 -->
+        <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem; margin-bottom: 1rem;">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-muted">비중 분포</span>
+                <span class="text-sm" title="세 가중치의 합은 반드시 1.0이어야 합니다.">합계: <span id="weightSum" class="{{ 'text-success' if (income_weight + job_weight + asset_weight) | round(2) == 1.0 else 'text-danger' }}">{{ (income_weight + job_weight + asset_weight) | round(2) }}</span></span>
+            </div>
+            <div style="display: flex; height: 24px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+                <div id="bar_income" style="background: var(--primary); transition: width 0.2s; width: {{ income_weight * 100 }}%;"></div>
+                <div id="bar_job" style="background: var(--success-fg); transition: width 0.2s; width: {{ job_weight * 100 }}%;"></div>
+                <div id="bar_asset" style="background: var(--warning-fg); transition: width 0.2s; width: {{ asset_weight * 100 }}%;"></div>
+            </div>
+        </div>
+        <!-- 세 가중치 카드 -->
+        <div class="grid-3">
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label text-primary">소득 비중 (WEIGHT_INCOME)</label>
                 <input type="range" min="0" max="1" step="0.01" name="income_weight" value="{{ income_weight }}" id="rng_income" oninput="syncWeight()" class="w-full">
                 <input type="number" step="0.01" min="0" max="1" id="num_income" value="{{ income_weight }}" onchange="syncFromNum('income')" class="form-input mt-2">
                 <p class="help-text">0.0~1.0 범위. 값이 클수록 연 소득이 신용 점수에 더 큰 영향을 미칩니다.</p>
             </div>
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label text-success">고용 안정성 (WEIGHT_JOB_STABILITY)</label>
                 <input type="range" min="0" max="1" step="0.01" name="job_weight" value="{{ job_weight }}" id="rng_job" oninput="syncWeight()" class="w-full">
                 <input type="number" step="0.01" min="0" max="1" id="num_job" value="{{ job_weight }}" onchange="syncFromNum('job')" class="form-input mt-2">
                 <p class="help-text">0.0~1.0 범위. 고용 형태(대기업·공무원→1.0, 무직→0.2)와 곱해집니다.</p>
             </div>
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label text-warning">자산 비중 (WEIGHT_ESTATE_ASSET)</label>
                 <input type="range" min="0" max="1" step="0.01" name="asset_weight" value="{{ asset_weight }}" id="rng_asset" oninput="syncWeight()" class="w-full">
                 <input type="number" step="0.01" min="0" max="1" id="num_asset" value="{{ asset_weight }}" onchange="syncFromNum('asset')" class="form-input mt-2">
                 <p class="help-text">0.0~1.0 범위. 보유 자산 금액을 정규화한 점수에 곱해집니다.</p>
             </div>
         </div>
-        <!-- 합계 표시 + 비율 바 -->
-        <div class="mb-2 text-lg font-bold" title="세 가중치의 합은 반드시 1.0이어야 합니다.">합계: <span id="weightSum" class="{{ 'text-success' if (income_weight + job_weight + asset_weight) | round(2) == 1.0 else 'text-danger' }}">{{ (income_weight + job_weight + asset_weight) | round(2) }}</span></div>
-        <div style="display: flex; height: 24px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
-            <div id="bar_income" style="background: var(--primary); transition: width 0.2s; width: {{ income_weight * 100 }}%;"></div>
-            <div id="bar_job" style="background: var(--success-fg); transition: width 0.2s; width: {{ job_weight * 100 }}%;"></div>
-            <div id="bar_asset" style="background: var(--warning-fg); transition: width 0.2s; width: {{ asset_weight * 100 }}%;"></div>
-        </div>
     </div>
 
     <!-- 섹션 2: 정규화 기준 -->
-    <div class="card card-p mb-6">
-        <h3 class="card-title text-primary mt-0">정규화 기준 (Normalization Ceiling)</h3>
+    <div class="card card-p card-static mb-6">
+        <div class="flex items-center gap-2 mb-5">
+            <span class="badge badge-info">Normalization</span>
+            <h3 class="font-bold text-sm">정규화 기준 (Normalization Ceiling)</h3>
+        </div>
         <p class="help-text mb-4">입력한 금액을 100%로 보고 비율로 0.0~1.0 점수를 매깁니다. 예: 소득 기준이 1억원이면 소득 5천만원인 유저는 점수 0.5를 받습니다.</p>
         <div class="grid-2">
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label">소득 만점 기준 (원)</label>
                 <input type="number" name="norm_income_ceiling" value="{{ norm_income_ceiling | int }}" step="10000000" placeholder="예: 100000000 (1억원)" class="form-input">
                 <div class="text-sm text-sub mt-2">현재: {{ "{:,.0f}".format(norm_income_ceiling) }}원</div>
                 <p class="help-text">이 금액 이상의 연 소득은 소득 점수 1.0(만점)을 받습니다. 기본값: 1억원.</p>
             </div>
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label">자산 만점 기준 (원)</label>
                 <input type="number" name="norm_asset_ceiling" value="{{ norm_asset_ceiling | int }}" step="10000000" placeholder="예: 500000000 (5억원)" class="form-input">
                 <div class="text-sm text-sub mt-2">현재 설정: {{ "{:,.0f}".format(norm_asset_ceiling) }}원</div>
@@ -66,21 +78,24 @@
     </div>
 
     <!-- 섹션 3: XAI 설명 임계값 -->
-    <div class="card card-p mb-6">
-        <h3 class="card-title text-primary mt-0">XAI 설명 임계값 (Explanation Thresholds)</h3>
+    <div class="card card-p card-static mb-6">
+        <div class="flex items-center gap-2 mb-5">
+            <span class="badge badge-info">XAI</span>
+            <h3 class="font-bold text-sm">XAI 설명 임계값 (Explanation Thresholds)</h3>
+        </div>
         <p class="help-text mb-4">XAI 설명 텍스트에 표시될 최소 기여도 임계값입니다. 예: 소득 임계값이 0.15이면 소득 기여도가 15% 이상인 경우에만 설명이 표시됩니다. 값이 낮을수록 더 많은 항목이 표시됩니다.</p>
         <div class="grid-3">
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label">소득 기여도 임계값</label>
                 <input type="number" step="0.01" name="xai_threshold_income" value="{{ xai_threshold_income }}" class="form-input">
                 <p class="help-text">권장 범위: 0.05~0.30. 기본값 0.15.</p>
             </div>
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label">고용 기여도 임계값</label>
                 <input type="number" step="0.01" name="xai_threshold_job" value="{{ xai_threshold_job }}" class="form-input">
                 <p class="help-text">권장 범위: 0.05~0.25. 기본값 0.10.</p>
             </div>
-            <div>
+            <div style="background: var(--md-sys-color-surface-container); border-radius: calc(var(--radius-card) - 2px); padding: 1.25rem 1.5rem;">
                 <label class="form-label">자산 기여도 임계값</label>
                 <input type="number" step="0.01" name="xai_threshold_asset" value="{{ xai_threshold_asset }}" class="form-input">
                 <p class="help-text">권장 범위: 0.02~0.20. 기본값 0.05.</p>
