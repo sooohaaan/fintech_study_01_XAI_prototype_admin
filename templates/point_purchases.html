@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% from "macros.html" import summary_grid, status_badge, empty_state %}
+{% from "macros.html" import summary_grid, status_badge, empty_state, info_banner %}
 {% block content %}
 <h1>포인트 구매 내역</h1>
 <a href="/point-products" class="nav-btn mb-4">상품 목록으로 돌아가기</a>
-<div class="info-banner">유저들의 포인트 상품 구매 내역을 조회합니다.</div>
+{{ info_banner("유저들의 포인트 상품 구매 내역을 조회합니다.") }}
 
 {{ summary_grid([
     {"label": "총 구매 건수", "value": total_purchases},

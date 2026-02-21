@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "macros.html" import info_banner %}
 {% block content %}
 <h1>{{ '회원 정보 수정' if user else '신규 회원 등록' }}</h1>
 <a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
-<div class="info-banner">{{ '기존 회원 정보를 수정합니다.' if user else '신규 회원을 등록합니다.' }}</div>
+{{ info_banner('기존 회원 정보를 수정합니다.' if user else '신규 회원을 등록합니다.') }}
 
 <div class="card card-p max-w-600">
     <form method="post">

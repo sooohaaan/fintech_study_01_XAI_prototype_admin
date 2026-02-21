@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% from "macros.html" import summary_grid, status_badge %}
+{% from "macros.html" import summary_grid, status_badge, info_banner, warn_banner, confirm_form %}
 {% block content %}
 <h1>회원 상세 정보</h1>
 <a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
-<div class="info-banner">회원의 기본 정보, 포인트 현황, 미션 현황, 포인트 구매 내역을 통합 조회합니다.</div>
+{{ info_banner("회원의 기본 정보, 포인트 현황, 미션 현황, 포인트 구매 내역을 통합 조회합니다.") }}
 
 <div class="grid-2-1 mb-6">
     <div class="card card-p">
@@ -38,10 +38,8 @@
         </div>
         <div class="card card-p border-danger">
             <h3 class="card-title text-danger text-sm mt-0 mb-3">회원 삭제</h3>
-            <div class="warn-banner">삭제된 회원은 복구할 수 없습니다.</div>
-            <form action="/members/{{ user.user_id }}/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
-                <button type="submit" class="w-full btn-outline-danger">회원 삭제</button>
-            </form>
+            {{ warn_banner("삭제된 회원은 복구할 수 없습니다.") }}
+            {{ confirm_form("/members/" ~ user.user_id ~ "/delete", "회원 삭제") }}
         </div>
     </div>
 </div>

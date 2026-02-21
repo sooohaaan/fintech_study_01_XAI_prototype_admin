@@ -29,6 +29,12 @@
 
 {% macro empty_state(colspan, message) %}<tr><td colspan="{{ colspan }}" class="text-center text-sub p-4">{{ message }}</td></tr>{% endmacro %}
 
+{% macro info_banner(message) %}<div class="info-banner">{{ message | safe }}</div>{% endmacro %}
+
+{% macro warn_banner(message) %}<div class="warn-banner">{{ message | safe }}</div>{% endmacro %}
+
+{% macro confirm_form(action, button_label, confirm_msg="정말 삭제하시겠습니까?", btn_class="w-full btn-outline-danger", extra_class="") %}<form action="{{ action }}" method="post" onsubmit="return confirm('{{ confirm_msg }}');"{% if extra_class %} class="{{ extra_class }}"{% endif %}><button type="submit" class="{{ btn_class }}">{{ button_label }}</button></form>{% endmacro %}
+
 {% macro filter_form(fields, action="", label="", submit_label="검색", submit_class="btn-accent", reset_url="", show_reset=false, reset_label="초기화", extra_class="") %}
 <form method="get"{% if action %} action="{{ action }}"{% endif %} class="bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4 {{ extra_class }}">
     {% if label %}<span class="font-semibold text-sub">{{ label }}</span>{% endif %}

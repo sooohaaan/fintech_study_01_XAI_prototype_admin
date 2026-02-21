@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% from "macros.html" import summary_grid, empty_state %}
+{% from "macros.html" import summary_grid, empty_state, info_banner %}
 {% block content %}
 <h1>포인트 상세 - {{ user_id }}</h1>
 <a href="/points" class="nav-btn mb-4">목록으로 돌아가기</a>
-<div class="info-banner">해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.</div>
+{{ info_banner("해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.") }}
 
 {{ summary_grid([
     {"label": "현재 잔액", "value": "{:,}".format(user.balance)},

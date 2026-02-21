@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination %}
+{% from "macros.html" import guide_card, summary_grid, filter_form, empty_state, pagination, warn_banner %}
 {% block content %}
 <h1>포인트 생애주기 관리</h1>
 
@@ -30,7 +30,7 @@
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary mt-0">포인트 유동성 제어 (Manual Control)</h3>
-    <div class="warn-banner">특정 유저에게 포인트를 추가 지급(Mint)하거나, 보유 포인트를 회수(Burn)합니다.</div>
+    {{ warn_banner("특정 유저에게 포인트를 추가 지급(Mint)하거나, 보유 포인트를 회수(Burn)합니다.") }}
     <form method="post" action="/points/adjust" class="grid-3 gap-4 items-end">
         <div>
             <label class="form-label text-sm">대상 유저 ID</label>
