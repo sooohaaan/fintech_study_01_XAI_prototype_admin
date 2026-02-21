@@ -251,8 +251,8 @@ th.text-center, td.text-center { text-align: center; }
 /* === Summary & Banners === */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
 .summary-card { background: var(--md-sys-color-surface-container); padding: 1.25rem 1.5rem; border-radius: calc(var(--radius-card) - 2px); border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.summary-value { font-size: 2rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
-.summary-label { color: var(--text-sub); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.summary-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
+.summary-label { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .help-text { font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 0 0; line-height: 1.4; }
 .info-banner { background: var(--info-bg); border: 1px solid rgba(229, 170, 112, 0.3); border-radius: var(--radius-btn); padding: 1rem; color: var(--text-primary-color); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5; display: flex; gap: 12px; align-items: flex-start; }
 .warn-banner { background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-btn); padding: 1rem; color: var(--warning-fg); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.5; }

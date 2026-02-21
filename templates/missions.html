@@ -20,11 +20,11 @@
 
 {{ summary_grid([
     {"label": "전체 미션", "value": total},
-    {"label": "대기(pending)", "value": pending, "color": "sub", "link": url_for('missions', status_filter='pending')},
-    {"label": "진행(in_progress)", "value": in_progress, "color": "primary", "link": url_for('missions', status_filter='in_progress')},
-    {"label": "완료(completed)", "value": completed, "color": "success", "link": url_for('missions', status_filter='completed')},
-    {"label": "만료(expired)", "value": expired, "color": "danger", "link": url_for('missions', status_filter='expired')},
-    {"label": "포기(given_up)", "value": given_up, "color": "sub", "link": url_for('missions', status_filter='given_up')},
+    {"label": "대기(pending)", "value": pending, "color": "sub"},
+    {"label": "진행(in_progress)", "value": in_progress, "color": "primary"},
+    {"label": "완료(completed)", "value": completed, "color": "success"},
+    {"label": "만료(expired)", "value": expired, "color": "danger"},
+    {"label": "포기(given_up)", "value": given_up, "color": "sub"},
     {"label": "완료율", "value": "%.1f" | format(completion_rate) ~ "%", "color": "primary", "title": type_completion_tooltip}
 ], "mb-6", title="미션 현황", badge="Missions") }}
 
