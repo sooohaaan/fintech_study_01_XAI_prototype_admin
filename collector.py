@@ -286,22 +286,24 @@ class DataCollector:
 
     def collect_custom_source(self, source_key, endpoint):
         """커스텀 수집기 실행 (Generic JSON Collector)"""
+        log_source = source_key  # DB 조회 실패 시 fallback
         try:
-            # 1. API Key 조회
+            # 1. API Key 및 log_source 조회
             with self.engine.connect() as conn:
-                row = conn.execute(text("SELECT api_key_config FROM collection_sources WHERE source_key = :k"), {'k': source_key}).fetchone()
+                row = conn.execute(text("SELECT api_key_config, log_source FROM collection_sources WHERE source_key = :k"), {'k': source_key}).fetchone()
                 api_key_config = row[0] if row else None
-            
+                log_source = row[1] if (row and row[1]) else source_key
+
             api_key = None
             if api_key_config:
                 api_key = self._get_config(api_key_config)
-            
+
             print(f"[{source_key}] Fetching from {endpoint}...")
-            
+
             # 2. 실제 요청 (프로토타입용 단순화)
             if not endpoint or not endpoint.startswith('http'):
                 # URL이 유효하지 않으면 Mock 처리 (테스트 편의성)
-                self._log_status(source_key, "SUCCESS (MOCK)", 1, "Endpoint is not a valid URL, treated as mock success")
+                self._log_status(log_source, "SUCCESS (MOCK)", 1, "Endpoint is not a valid URL, treated as mock success")
                 return True, None
 
             params = {}
@@ -314,7 +316,7 @@ class DataCollector:
             try:
                 response = requests.get(endpoint, params=params, timeout=10)
                 response.raise_for_status()
-                
+
                 # [New] JSON 데이터 파일 저장
                 try:
                     data = response.json()
@@ -325,23 +327,23 @@ class DataCollector:
                 save_dir = os.path.join(base_dir, 'data', 'custom_sources')
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
-                
+
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"{source_key}_{timestamp}.json"
                 filepath = os.path.join(save_dir, filename)
-                
+
                 with open(filepath, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
 
-                self._log_status(source_key, "SUCCESS", 1, f"Data saved to {filename}")
+                self._log_status(log_source, "SUCCESS", 1, f"Data saved to {filename}")
                 return True, None
             except Exception as req_e:
-                self._log_status(source_key, "FAIL", 0, str(req_e), level='ERROR')
+                self._log_status(log_source, "FAIL", 0, str(req_e), level='ERROR')
                 return False, str(req_e)
 
         except Exception as e:
             error_msg = traceback.format_exc()
-            self._log_status(source_key, "FAIL", 0, error_msg, level='ERROR')
+            self._log_status(log_source, "FAIL", 0, error_msg, level='ERROR')
             return False, str(e)
 
     def run_all(self):

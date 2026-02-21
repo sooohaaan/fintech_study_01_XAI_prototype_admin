@@ -925,6 +925,7 @@ def collection_management():
                     'key': src['source_key'],
                     'label': src['label'],
                     'trigger_val': src['trigger_val'],
+                    'log_source': src['log_source'],
                     'enabled': configs.get(src['config_key_enabled'], '1') == '1',
                     'last_run': last_log.get('executed_at', '-') if not last_log.get('executed_at') else last_log['executed_at'].strftime('%Y-%m-%d %H:%M'),
                     'last_status': last_log.get('status', '-'),
