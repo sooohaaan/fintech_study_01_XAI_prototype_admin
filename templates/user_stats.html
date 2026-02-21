@@ -1,17 +1,13 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, empty_state %}
 {% block content %}
 <h1>유저 스탯 관리</h1>
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Data Management</span>
-            <h3 class="font-bold text-sm">유저 금융 데이터 관리</h3>
-        </div>
-        <p class="text-sm text-sub">
-            미션 자동 달성 여부를 판단하는 기준이 되는 유저의 금융 데이터(신용점수, DSR, 자산 연동 여부 등)를 조회하고 수정합니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("Data Management", "유저 금융 데이터 관리",
+    "미션 자동 달성 여부를 판단하는 기준이 되는 유저의 금융 데이터(신용점수, DSR, 자산 연동 여부 등)를 관리합니다.",
+    [
+        {"title": "데이터 조회", "desc": "개별 유저의 신용점수·DSR·자산 연동 현황을 확인합니다."},
+        {"title": "데이터 수정", "desc": "검토 후 필요한 항목을 직접 수정합니다."}
+    ]) }}
 
 <form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
     <span class="font-semibold text-sub">기간 설정:</span>
@@ -49,7 +45,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>
+            {{ empty_state(7, "데이터가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>

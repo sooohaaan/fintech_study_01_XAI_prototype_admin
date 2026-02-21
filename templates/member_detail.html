@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import summary_grid, status_badge %}
 {% block content %}
 <h1>회원 상세 정보</h1>
 <a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
@@ -24,13 +25,7 @@
         <div class="card card-p">
             <h3 class="card-title text-primary text-sm mt-0 mb-4">현재 상태</h3>
             <div style="text-align: center; margin-bottom: 1rem;">
-                {% if user.status == 'active' %}
-                    <span class="badge badge-success badge-lg">활성</span>
-                {% elif user.status == 'suspended' %}
-                    <span class="badge badge-danger badge-lg">정지</span>
-                {% else %}
-                    <span class="badge badge-neutral badge-lg">탈퇴</span>
-                {% endif %}
+                {{ status_badge(user.status, "user", "badge-lg") }}
             </div>
             <form action="/members/{{ user.user_id }}/status" method="post" class="flex gap-2">
                 <select name="new_status" class="form-select flex-1">
@@ -51,20 +46,11 @@
     </div>
 </div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">포인트 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(points.balance) }}P</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value text-success">{{ "{:,}".format(points.total_earned) }}P</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(points.total_spent) }}P</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "포인트 잔액", "value": "{:,}".format(points.balance) ~ "P"},
+    {"label": "총 지급", "value": "{:,}".format(points.total_earned) ~ "P", "color": "success"},
+    {"label": "총 사용", "value": "{:,}".format(points.total_spent) ~ "P", "color": "danger"}
+], "mb-6", title="포인트 현황", badge="Points") }}
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary mt-0 mb-4">미션 현황 ({{ missions|length }}건)</h3>
@@ -83,17 +69,7 @@
                 <tr>
                     <td class="font-bold">{{ m.mission_title }}</td>
                     <td><span class="badge badge-info">{{ m.mission_type }}</span></td>
-                    <td class="text-center">
-                        {% if m.status == 'completed' %}
-                            <span class="badge badge-success">완료</span>
-                        {% elif m.status == 'in_progress' %}
-                            <span class="badge badge-info">진행중</span>
-                        {% elif m.status == 'expired' %}
-                            <span class="badge badge-danger">만료</span>
-                        {% else %}
-                            <span class="badge badge-warning">대기</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(m.status, "mission_ko") }}</td>
                     <td class="text-right font-bold">{{ "{:,}".format(m.reward_points) }}P</td>
                     <td>{{ m.due_date or '-' }}</td>
                 </tr>
@@ -122,15 +98,7 @@
                 <tr>
                     <td class="font-bold">{{ p.product_name or '(삭제된 상품)' }}</td>
                     <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
-                    <td class="text-center">
-                        {% if p.status == 'completed' %}
-                            <span class="badge badge-success">completed</span>
-                        {% elif p.status == 'cancelled' %}
-                            <span class="badge badge-neutral">cancelled</span>
-                        {% else %}
-                            <span class="badge badge-warning">{{ p.status }}</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(p.status, "purchase") }}</td>
                     <td>{{ p.purchased_at }}</td>
                 </tr>
                 {% endfor %}

@@ -1,20 +1,14 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, empty_state, pagination %}
 {% block content %}
     <h1>수집 데이터 조회: {{ table_name }}</h1>
 
-    <div class="card guide-card">
-        <div class="card-p">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="badge badge-info">데이터 접근성</span>
-                <h3 class="font-bold text-sm">원시 데이터(Raw Data) 조회</h3>
-            </div>
-            <p class="text-sm text-sub">
-                AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 있는 그대로 조회할 수 있습니다. 데이터가 어떻게 저장되고 관리되는지 직접 확인함으로써, 데이터 파이프라인의 <strong>신뢰성</strong>을 검증할 수 있습니다.
-            </p>
-        </div>
-    </div>
-
-    <div class="info-banner">수집된 원시 데이터를 테이블별로 조회합니다.</div>
+    {{ guide_card("데이터 접근성", "원시 데이터(Raw Data) 조회",
+        "AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 직접 조회하여 데이터 파이프라인의 신뢰성을 검증합니다.",
+        [
+            {"title": "테이블 선택", "desc": "상단 탭에서 조회할 데이터 테이블을 선택합니다."},
+            {"title": "데이터 조회", "desc": "필터 조건을 설정하고 원시 데이터를 조회합니다."}
+        ]) }}
     <div class="mb-4 flex flex-wrap gap-2">
         <a href="/data/raw_loan_products" class="nav-btn {{ 'active' if table_name == 'raw_loan_products' else '' }}">대출 상품</a>
         <a href="/data/raw_economic_indicators" class="nav-btn {{ 'active' if table_name == 'raw_economic_indicators' else '' }}">경제 지표</a>
@@ -62,21 +56,24 @@
                     <td>
                         {% if col in ['status', 'type', 'transaction_type', 'product_type'] %}
                             <span class="badge badge-neutral">{{ row[col] }}</span>
+                        {% elif col in ['message', 'error_message', 'description', 'memo', 'reason', 'api_desc'] and row[col] %}
+                            <div class="text-truncate" style="max-width: 300px; cursor: pointer; color: var(--text-main);" 
+                                 onclick="showLogMessage(this.getAttribute('data-msg'))" 
+                                 data-msg="{{ row[col] }}" title="클릭하여 전체 보기">
+                                {{ row[col] }}
+                            </div>
                         {% else %}
                             {{ row[col] }}
                         {% endif %}
                     </td>
                     {% endfor %}
                 </tr>
-                {% else %}<tr><td colspan="{{ columns|length }}" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>{% endfor %}
+                {% else %}{{ empty_state(columns|length, "데이터가 없습니다.") }}{% endfor %}
             </tbody>
         </table>
     </div>
-    <div class="flex justify-between items-center mt-4">
-        {% if page > 1 %}<a href="{{ url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">이전</a>
-        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-        <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }} ({{ "{:,}".format(total_count) }}건)</span>
-        {% if page < total_pages %}<a href="{{ url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">다음</a>
-        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-    </div>
+    {{ pagination(page, total_pages,
+        url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val),
+        url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val),
+        "{:,}".format(total_count)) }}
 {% endblock %}

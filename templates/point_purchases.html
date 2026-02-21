@@ -1,19 +1,14 @@
 {% extends "base.html" %}
+{% from "macros.html" import summary_grid, status_badge, empty_state %}
 {% block content %}
 <h1>포인트 구매 내역</h1>
 <a href="/point-products" class="nav-btn mb-4">상품 목록으로 돌아가기</a>
 <div class="info-banner">유저들의 포인트 상품 구매 내역을 조회합니다.</div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">총 구매 건수</div>
-        <div class="summary-value">{{ total_purchases }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용 포인트</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(total_points_used) }}P</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "총 구매 건수", "value": total_purchases},
+    {"label": "총 사용 포인트", "value": "{:,}".format(total_points_used) ~ "P", "color": "danger"}
+], "mb-6", title="구매 내역 요약", badge="Purchases") }}
 
 <div class="table-wrapper">
     <table class="w-full">
@@ -32,19 +27,11 @@
                 <td class="font-bold">{{ p.user_id }}</td>
                 <td>{{ p.product_name or '(삭제된 상품)' }}</td>
                 <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
-                <td class="text-center">
-                    {% if p.status == 'completed' %}
-                        <span class="badge badge-success">completed</span>
-                    {% elif p.status == 'cancelled' %}
-                        <span class="badge badge-neutral">cancelled</span>
-                    {% else %}
-                        <span class="badge badge-warning">{{ p.status }}</span>
-                    {% endif %}
-                </td>
+                <td class="text-center">{{ status_badge(p.status, "purchase") }}</td>
                 <td>{{ p.purchased_at }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="text-center text-sub p-4">구매 내역이 없습니다.</td></tr>
+            {{ empty_state(6, "구매 내역이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>

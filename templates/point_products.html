@@ -1,35 +1,20 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
 {% block content %}
 <h1>포인트 상품 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">순환 구조</span>
-            <h3 class="font-bold text-sm">포인트의 실질적 가치</h3>
-        </div>
-        <p class="text-sm text-sub">
-            획득한 포인트가 단순한 숫자에 그치지 않고, 실제 생활에 유용한 혜택(쿠폰, 금리 할인권 등)으로 교환될 수 있어야 합니다. 이러한 <strong>선순환 구조</strong>는 사용자가 TrustFin 생태계에 머무르게 하는 핵심 요인이 됩니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("순환 구조", "포인트의 실질적 가치",
+    "획득한 포인트가 쿠폰·금리 할인권 등 실제 혜택으로 교환될 수 있어야 합니다. 이 선순환 구조는 사용자가 TrustFin 생태계에 머무르게 하는 핵심 요인입니다.",
+    [
+        {"title": "상품 조회", "desc": "현재 등록된 포인트 교환 상품 목록을 확인합니다."},
+        {"title": "상품 관리", "desc": "상품을 추가·수정하거나 노출 여부를 변경합니다."}
+    ]) }}
 
-<div class="info-banner">포인트로 교환 가능한 상품을 등록하고 관리합니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">전체 상품</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">활성 상품</div>
-        <div class="summary-value text-success">{{ active_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">비활성 상품</div>
-        <div class="summary-value text-danger">{{ inactive_count }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 상품", "value": total_count},
+    {"label": "활성 상품", "value": active_count, "color": "success"},
+    {"label": "비활성 상품", "value": inactive_count, "color": "danger"}
+], "mb-6", title="포인트 상품 현황", badge="Store") }}
 
 <div class="flex gap-2 mb-6">
     <a href="/point-products/add" class="btn-accent">상품 추가</a>
@@ -74,17 +59,13 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">등록된 상품이 없습니다.</td></tr>
+            {{ empty_state(7, "등록된 상품이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('point_products', page=page-1) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('point_products', page=page+1) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('point_products', page=page-1),
+    url_for('point_products', page=page+1)) }}
 {% endblock %}

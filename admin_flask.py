@@ -197,18 +197,11 @@ html.dark {
     --shadow-sm: 0px 1px 3px 1px rgba(0,0,0,0.15), 0px 1px 2px 0px rgba(0,0,0,0.3);
     --shadow-md: 0px 2px 6px 2px rgba(0,0,0,0.15), 0px 1px 2px 0px rgba(0,0,0,0.3);
 }
-/* Narrative Grid: dark mode uses white lines instead of black */
-html.dark body {
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-}
 
 /* === Base === */
-body { 
-    font-family: "Roboto", "Pretendard", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; 
-    background-color: var(--bg-page); 
-    /* The Narrative Grid: Subtle grid pattern for logical structure */
-    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+body {
+    font-family: "Noto Sans KR", "Noto Sans", system-ui, sans-serif;
+    background-color: var(--bg-page);
     color: var(--text-main); margin: 0; padding: 0; letter-spacing: 0.01em; -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s; line-height: 1.5; }
 h1 { color: var(--text-main); font-size: 1.75rem; font-weight: 400; margin: 0 0 1.5rem 0; letter-spacing: 0; }
 
@@ -262,6 +255,8 @@ h1 { color: var(--text-main); font-size: 1.75rem; font-weight: 400; margin: 0 0 
 .card:hover { 
     background-color: var(--md-sys-color-surface-container-low);
     border-color: var(--md-sys-color-outline-variant);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background-color: transparent; }
 .card-title-group { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -301,11 +296,8 @@ th.text-center, td.text-center { text-align: center; }
 .badge-lg { padding: 6px 16px; font-size: 0.85rem; }
 
 /* === Summary & Banners === */
-.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: var(--md-sys-color-surface-container); padding: 1.5rem; border-radius: var(--radius-card); box-shadow: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: var(--transition); }
-.summary-card:hover { 
-    box-shadow: var(--shadow-sm);
-}
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.summary-card { background: var(--md-sys-color-surface-container); padding: 1.25rem 1.5rem; border-radius: calc(var(--radius-card) - 2px); border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .summary-value { font-size: 2rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0; line-height: 1; }
 .summary-label { color: var(--text-sub); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .help-text { font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 0 0; line-height: 1.4; }
@@ -336,21 +328,28 @@ input[type=range]::-moz-range-thumb { height: 20px; width: 20px; border: none; b
 input[type=range]:focus::-moz-range-thumb { box-shadow: 0 0 0 8px rgba(229, 170, 112, 0.2); }
 input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(229, 170, 112, 0.1); }
 
-/* M3 Filled Button (Primary Action) */
-.btn-accent { background-color: var(--accent); color: var(--md-sys-color-on-primary); }
-.btn-accent:hover { background-color: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+/* Primary Button (Black) */
+.btn-accent, .btn-primary { background-color: #000000; color: #FFFFFF; }
+.btn-accent:hover, .btn-primary:hover { background-color: #222222; box-shadow: var(--shadow-md); }
 
-/* M3 Tonal Button */
-.btn-tonal { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
-.btn-tonal:hover { background-color: var(--md-sys-color-secondary); color: var(--md-sys-color-on-secondary); box-shadow: var(--shadow-sm); }
-.btn-icon { padding: 8px; background-color: transparent; color: var(--text-sub); border: 1px solid transparent; border-radius: 8px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; }
-.btn-icon:hover { background-color: var(--bg-soft); color: var(--text-primary-color); }
-/* M3-style state layer for danger icon button */
+/* Secondary Button (Evidence Grey) */
+.btn-tonal { background-color: #8E8E8E; color: #FFFFFF; }
+.btn-tonal:hover { background-color: #717171; box-shadow: var(--shadow-sm); }
+
+/* Text Button */
+.btn-text { background-color: transparent; color: #000000; }
+.btn-text:hover { background-color: rgba(0, 0, 0, 0.06); }
+
+/* Icon Button */
+.btn-icon { padding: 8px; background-color: transparent; color: #8E8E8E; border: 1px solid transparent; border-radius: 8px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; }
+.btn-icon:hover { background-color: rgba(0, 0, 0, 0.06); color: #000000; }
 .btn-icon.text-danger:hover { background-color: var(--danger-bg); color: var(--danger-fg); }
+
+/* Outline Buttons */
 .btn-outline-danger { padding: 6px 14px; background: transparent; color: var(--danger-fg); border: 1px solid var(--danger-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
 .btn-outline-danger:hover { background: var(--danger-bg); }
-.btn-outline-success { padding: 6px 14px; background: transparent; color: var(--success-fg); border: 1px solid var(--success-fg); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
-.btn-outline-success:hover { background: var(--success-bg); }
+.btn-outline-success { padding: 6px 14px; background: transparent; color: #000000; border: 1px solid #000000; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.btn-outline-success:hover { background: rgba(0, 0, 0, 0.06); }
 /* Password Toggle Icon */
 .password-toggle-icon { transition: color 0.2s ease; }
 .password-toggle-icon:hover { color: var(--text-primary-color); }
@@ -403,6 +402,18 @@ input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); box-shadow: 0
     cursor: pointer; color: var(--text-muted); z-index: 1;
 }
 
+/* M3 Chips (Read-only) */
+.m3-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 32px; padding: 0 12px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.85rem; font-weight: 500;
+    cursor: default;
+}
+
 /* Radio Chips */
 .radio-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .radio-chip { position: relative; }
@@ -433,29 +444,30 @@ input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); box-shadow: 0
 }
 
 /* Toggle Switch */
-.toggle-switch { position: relative; display: inline-block; width: 52px; height: 32px; vertical-align: middle; }
+.toggle-switch { position: relative; display: inline-block; width: 52px; height: 32px; vertical-align: middle; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--md-sys-color-surface-container-highest); border: 2px solid var(--md-sys-color-outline); border-radius: 100px; transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0); }
-.slider:before { 
-    position: absolute; 
-    content: ""; 
-    height: 16px; 
-    width: 16px; 
-    left: 8px; 
-    bottom: 8px; 
-    background-color: var(--md-sys-color-outline); 
-    border-radius: 50%; 
-    transition: all 0.2s cubic-bezier(0.2, 0.0, 0, 1.0);
-    -webkit-mask-size: contain; mask-size: contain;
+/* OFF state: Evidence Grey border + thumb */
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #E8E8E8; border: 2px solid #8E8E8E; border-radius: 16px; transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); }
+.slider:before {
+    position: absolute; content: "";
+    height: 16px; width: 16px; left: 6px; bottom: 6px;
+    background-color: #8E8E8E; border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+/* ON state: Black track + White thumb */
+input:checked + .slider { background-color: #000000; border-color: #000000; }
+input:checked + .slider:before {
+    transform: translateX(20px); width: 24px; height: 24px; bottom: 2px; left: 4px;
+    background-color: #FFFFFF;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 16px; mask-size: 16px;
     -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
     -webkit-mask-position: center; mask-position: center;
 }
-/* Checked State (M3) */
-input:checked + .slider { background-color: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); }
-input:checked + .slider:before { transform: translateX(12px); width: 24px; height: 24px; bottom: 4px; background-color: var(--md-sys-color-on-primary); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9.55 18.2l-5.7-5.7l1.425-1.425L9.55 15.35l9.175-9.175L20.15 7.6z'/%3E%3C/svg%3E"); }
 /* Hover State */
-.toggle-switch:hover .slider:before { background-color: var(--md-sys-color-on-surface-variant); }
-input:checked:hover + .slider:before { background-color: var(--md-sys-color-primary-container); }
+.toggle-switch:hover .slider:before { background-color: #717171; }
+input:checked:hover + .slider { background-color: #222222; border-color: #222222; }
 
 /* Progress Bar */
 .progress-track { background-color: var(--border-light); border-radius: 8px; height: 20px; overflow: hidden; width: 100%; }
@@ -542,6 +554,7 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 /* Spacing Utilities */
 .space-y-4 > * + * { margin-top: 1rem; }
 .space-y-2 > * + * { margin-top: 0.5rem; }
+.space-y-6 > * + * { margin-top: 1.5rem; }
 
 /* Positioning & Visibility */
 .relative { position: relative; }
@@ -593,8 +606,13 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 .weight-value { font-size: 1.5rem; font-weight: 700; }
 
 /* Guide Card */
-/* The Precision Star: Highlight core message with accent color border */
-.guide-card { border: 1px solid var(--md-sys-color-primary-container); border-left: 4px solid var(--primary); background: var(--md-sys-color-surface-container-low); margin-bottom: 2rem; box-shadow: none; border-radius: var(--radius-card); }
+.guide-card { display: flex; align-items: center; background: transparent; margin-bottom: 1.5rem; padding: 0.75rem 0; }
+.guide-card:hover { transform: none; box-shadow: none; background: transparent; border-color: transparent; }
+.guide-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+.guide-step { display: flex; align-items: center; gap: 0.75rem; }
+.guide-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; background: #000000; color: #FFFFFF; font-size: 0.7rem; font-weight: 700; }
+.guide-step-divider { width: 1px; height: 28px; background: var(--border-light); margin: 0 1.5rem; flex-shrink: 0; }
+.card-static:hover { transform: none; box-shadow: none; background-color: var(--bg-card); border-color: var(--border-light); }
 
 /* Card Disabled Overlay (M3: state layer for disabled containers) */
 .card-disabled-overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background-color: var(--bg-page); opacity: 0.75; border-radius: var(--radius-card); cursor: not-allowed; pointer-events: auto; }
@@ -633,10 +651,10 @@ input:checked:hover + .slider:before { background-color: var(--md-sys-color-prim
 /* === Modal & Logs === */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.hidden { display: none; }
-.modal-content { background: var(--md-sys-color-surface-container-high); width: 90%; max-width: 800px; max-height: 80vh; border-radius: var(--radius-dialog); box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); animation: modalFadeIn 0.2s ease-out; }
+.modal-content { background: var(--md-sys-color-surface-container-high); width: 90%; max-width: 800px; max-height: 80vh; border-radius: var(--radius-dialog); box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); animation: modalFadeIn 0.2s ease-out; overflow: hidden; }
 @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-.modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
-.modal-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
+.modal-header { padding: 1.5rem 1.5rem 1rem; border-bottom: none; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; font-size: 1.5rem; font-weight: 400; color: var(--md-sys-color-on-surface); }
 .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-sub); padding: 0; line-height: 1; }
 .close-btn:hover { color: var(--text-main); }
 .modal-body { padding: 1.5rem; overflow-y: auto; background: var(--bg-soft); }
@@ -665,6 +683,23 @@ html.dark .sticky-header {
     background: rgba(var(--md-sys-color-background-rgb), 0.8);
     border-bottom: 1px solid #333;
 }
+
+/* Dark mode button overrides */
+html.dark .btn-accent, html.dark .btn-primary { background-color: #FFFFFF; color: #000000; }
+html.dark .btn-accent:hover, html.dark .btn-primary:hover { background-color: #E0E0E0; }
+html.dark .btn-text { color: #FFFFFF; }
+html.dark .btn-text:hover { background-color: rgba(255, 255, 255, 0.08); }
+html.dark .btn-icon { color: #8E8E8E; }
+html.dark .btn-icon:hover { background-color: rgba(255, 255, 255, 0.08); color: #FFFFFF; }
+html.dark .btn-outline-success { color: #FFFFFF; border-color: #FFFFFF; }
+html.dark .btn-outline-success:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* Dark mode toggle overrides */
+html.dark .slider { background-color: #3A3A3A; border-color: #8E8E8E; }
+html.dark .slider:before { background-color: #8E8E8E; }
+html.dark input:checked + .slider { background-color: #FFFFFF; border-color: #FFFFFF; }
+html.dark input:checked + .slider:before { background-color: #000000; }
+html.dark input:checked:hover + .slider { background-color: #E0E0E0; border-color: #E0E0E0; }
 """)
 
 # Always overwrite login.css to apply latest brand colors
@@ -706,13 +741,78 @@ button:hover { background-color: var(--primary-hover); }
 
 # [Self-Repair] 주요 HTML 템플릿 파일 자동 생성
 templates_to_create = {
+    'macros.html': """{% macro guide_card(badge, title, purpose, steps, note="", usage_desc="") %}
+<div class="card card-p card-static" style="margin-bottom: 1.5rem;">
+    <div class="flex items-center gap-2 mb-5">
+        <span class="badge badge-info">{{ badge }}</span>
+        <h3 class="font-bold text-sm">{{ title }}</h3>
+    </div>
+    <div class="mb-4" style="background: var(--bg-soft); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">목적</p>
+        <p class="text-sm text-sub">{{ purpose | safe }}</p>
+        {% if note %}<p class="text-xs text-muted mt-2">{{ note | safe }}</p>{% endif %}
+    </div>
+    <div style="background: var(--bg-soft); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-3">사용 방법</p>
+        {% if usage_desc %}<p class="text-xs text-muted mb-3">{{ usage_desc }}</p>{% endif %}
+        <div style="display: flex; gap: 0.75rem;">
+            {% for step in steps %}
+            <div style="flex: 1; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="guide-step-num">{{ loop.index }}</span>
+                    <strong class="text-sm">{{ step.title }}</strong>
+                </div>
+                <p class="text-xs text-muted">{{ step.desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro empty_state(colspan, message) %}<tr><td colspan="{{ colspan }}" class="text-center text-sub p-4">{{ message }}</td></tr>{% endmacro %}
+
+{% macro pagination(page, total_pages, prev_url, next_url, total_count="") %}
+<div class="flex justify-between items-center mt-4">
+    {% if page > 1 %}<a href="{{ prev_url }}" class="nav-btn">이전</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}{% if total_count %} ({{ total_count }}건){% endif %}</span>
+    {% if page < total_pages %}<a href="{{ next_url }}" class="nav-btn">다음</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro status_badge(status, type="mission", extra_class="") %}{% if type == "mission" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">completed</span>{% elif status == "in_progress" %}<span class="badge badge-info {{ extra_class }}">in_progress</span>{% elif status == "expired" %}<span class="badge badge-danger {{ extra_class }}">expired</span>{% elif status == "given_up" %}<span class="badge badge-neutral {{ extra_class }}">given_up</span>{% else %}<span class="badge badge-warning {{ extra_class }}">pending</span>{% endif %}{% elif type == "mission_ko" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">완료</span>{% elif status == "in_progress" %}<span class="badge badge-info {{ extra_class }}">진행중</span>{% elif status == "expired" %}<span class="badge badge-danger {{ extra_class }}">만료</span>{% else %}<span class="badge badge-warning {{ extra_class }}">대기</span>{% endif %}{% elif type == "user" %}{% if status == "active" %}<span class="badge badge-success {{ extra_class }}">활성</span>{% elif status == "suspended" %}<span class="badge badge-danger {{ extra_class }}">정지</span>{% else %}<span class="badge badge-neutral {{ extra_class }}">탈퇴</span>{% endif %}{% elif type == "purchase" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">completed</span>{% elif status == "cancelled" %}<span class="badge badge-neutral {{ extra_class }}">cancelled</span>{% else %}<span class="badge badge-warning {{ extra_class }}">{{ status }}</span>{% endif %}{% endif %}{% endmacro %}
+
+{% macro summary_grid(cards, extra_class="", title="", badge="") %}
+<div class="card card-p card-static {{ extra_class }}">
+    {% if title %}
+    <div class="flex items-center gap-2 mb-5">
+        {% if badge %}<span class="badge badge-info">{{ badge }}</span>{% endif %}
+        <h3 class="font-bold text-sm">{{ title }}</h3>
+    </div>
+    {% endif %}
+    <div class="summary-grid">
+        {% for card in cards %}
+        <div class="summary-card"{% if card.title %} title="{{ card.title }}"{% endif %}>
+            <div class="summary-label">{{ card.label }}</div>
+            <div class="summary-value{% if card.color %} text-{{ card.color }}{% endif %}">{{ card.value }}</div>
+            {% if card.help %}<p class="help-text">{{ card.help }}</p>{% endif %}
+            {% if card.link %}<a href="{{ card.link }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">{{ card.link_label if card.link_label else "모아보기" }}</a>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}""",
     'base.html': """<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     {% block head_meta %}{% endblock %}
     <title>TrustFin Admin</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
     <script>
         (function() {
@@ -963,6 +1063,7 @@ templates_to_create = {
 </body>
 </html>""",
     'index.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state %}
 
 {% block head_meta %}
     {% if auto_refresh %}
@@ -971,42 +1072,20 @@ templates_to_create = {
 {% endblock %}
 
 {% block content %}
-        <!-- Educational Guide Card -->
-        <div class="card guide-card">
-            <div class="card-p">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="badge badge-info">Dashboard Guide</span>
-                    <h3 class="font-bold text-sm">통합 관제 대시보드</h3>
-                </div>
-                <div class="text-sm text-sub space-y-2">
-                    <p><strong>목적:</strong> 서비스의 전반적인 건강 상태(Health)와 핵심 지표를 한눈에 파악합니다.</p>
-                    <p><strong>기능:</strong>
-                        1. <strong>시스템 상태:</strong> DB 연결 및 수집기 활성 상태 모니터링.<br>
-                        2. <strong>데이터 요약:</strong> 수집된 금융 데이터의 총량 확인.<br>
-                        3. <strong>수집 로그:</strong> 각 데이터 소스별 최근 실행 결과(성공/실패) 및 에러 확인.
-                    </p>
-                </div>
-            </div>
-        </div>
+        {{ guide_card("Dashboard Guide", "통합 관제 대시보드",
+            "서비스의 전반적인 건강 상태(Health)와 핵심 지표를 한눈에 파악합니다.",
+            [
+                {"title": "시스템 상태", "desc": "DB 연결 및 수집기 활성 상태를 모니터링합니다."},
+                {"title": "데이터 요약", "desc": "수집된 금융 데이터의 총량을 확인합니다."},
+                {"title": "수집 로그", "desc": "각 데이터 소스별 최근 실행 결과(성공/실패) 및 에러를 확인합니다."}
+            ]) }}
 
-        <div class="summary-grid">
-            <div class="summary-card" title="금감원 API에서 수집된 대출 상품의 총 건수입니다.">
-                <div class="summary-label">대출 상품 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.loan_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다.">
-                <div class="summary-label">경제 지표 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.economy_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다.">
-                <div class="summary-label">소득 통계 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.income_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다.">
-                <div class="summary-label">총 수집 로그</div>
-                <div class="summary-value">{{ "{:,}".format(stats.log_count | default(0)) }}</div>
-            </div>
-        </div>
+        {{ summary_grid([
+            {"label": "대출 상품 수", "value": "{:,}".format(stats.loan_count | default(0)), "title": "금감원 API에서 수집된 대출 상품의 총 건수입니다."},
+            {"label": "경제 지표 수", "value": "{:,}".format(stats.economy_count | default(0)), "title": "통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다."},
+            {"label": "소득 통계 수", "value": "{:,}".format(stats.income_count | default(0)), "title": "통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다."},
+            {"label": "총 수집 로그", "value": "{:,}".format(stats.log_count | default(0)), "title": "모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다."}
+        ], title="수집 데이터 현황", badge="Overview") }}
 
         <div class="grid-2 mb-6">
             <!-- 신용 평가 가중치 요약 -->
@@ -1166,7 +1245,7 @@ templates_to_create = {
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="4" class="text-center text-muted p-4">가입 회원이 없습니다.</td></tr>
+                            {{ empty_state(4, "가입 회원이 없습니다.") }}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -1289,34 +1368,24 @@ templates_to_create = {
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="text-center text-muted p-4">수집된 로그가 없습니다.</td></tr>
+            {{ empty_state(5, "수집된 로그가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>""",
     'collection_management.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
 <h1>금융 데이터 수집 관리</h1>
 
-<!-- [M3 Guide Card] 기능 설명 및 가이드 -->
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Collection Guide</span>
-            <h3 class="font-bold text-sm">금융 데이터 수집 관리</h3>
-        </div>
-        <div class="text-sm text-sub space-y-2">
-            <p><strong>목적:</strong> 외부 기관(금감원, 통계청 등)의 데이터를 가져오는 파이프라인을 제어합니다.</p>
-            <p><strong>사용 방법:</strong>
-                1. <strong>토글 스위치:</strong> 각 수집기의 자동 실행 여부(ON/OFF)를 제어합니다.<br>
-                2. <strong>설정 폼:</strong> API 인증키, 수집 주기(매일/매월), 수집 기간을 설정하고 저장합니다.<br>
-                3. <strong>새로고침:</strong> '데이터 새로고침' 버튼으로 즉시 수집을 실행합니다.
-            </p>
-        </div>
-    </div>
-</div>
-
-<div class="info-banner">데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 데이터를 즉시 새로고침(수집)할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 새로고침 버튼도 비활성화됩니다.</div>
+{{ guide_card("Collection Guide", "금융 데이터 수집 관리",
+    "외부 기관(금감원, 통계청 등)의 데이터를 가져오는 파이프라인을 제어합니다.",
+    [
+        {"title": "토글 스위치", "desc": "각 수집기의 자동 실행 여부(ON/OFF)를 제어합니다."},
+        {"title": "설정 폼", "desc": "API 인증키, 수집 주기(매일/매월), 수집 기간을 설정하고 저장합니다."},
+        {"title": "새로고침", "desc": "'데이터 새로고침' 버튼으로 즉시 수집을 실행합니다."}
+    ],
+    usage_desc="데이터 수집 소스별로 자동 수집 활성화 여부를 설정하고, 필요 시 데이터를 즉시 새로고침(수집)할 수 있습니다. OFF 상태에서는 자동 스케줄 수집이 실행되지 않으며, 새로고침 버튼도 비활성화됩니다.") }}
 
 <div class="flex justify-end mb-4">
     <button onclick="openAddSourceModal()" class="btn-accent flex items-center gap-2">
@@ -1325,211 +1394,157 @@ templates_to_create = {
     </button>
 </div>
 
-<div class="grid-2">
-    {% for src in sources %}
-    <div class="card card-p relative {% if 'SUCCESS' in src.last_status %}border-success{% elif src.last_status == 'FAIL' %}border-danger{% endif %}">
-        <!-- Header & Toggle -->
-        <div class="flex justify-between items-start mb-6 relative" style="z-index: 20;">
-            <div>
-                <h3 class="card-title text-lg mb-1 flex items-center gap-2">
-                    {{ src.label }}
-                    {% if src.enabled %}
-                        <span class="status-dot dot-success" title="활성 상태"></span>
-                    {% else %}
-                        <span class="status-dot dot-neutral" style="background-color: var(--text-muted);" title="비활성 상태"></span>
-                    {% endif %}
-                </h3>
-                <p class="text-xs text-muted">{{ src.api_desc }}</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <form action="/toggle_collector" method="post" style="margin:0;">
-                    <input type="hidden" name="source" value="{{ src.key }}">
-                    <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
-                        <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }} aria-label="{{ src.label }} 수집기 토글">
-                        <span class="slider"></span>
-                    </label>
-                </form>
-                <!-- 삭제 버튼 -->
-                <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger hover:bg-red-50" title="수집기 삭제">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Status Grid (M3 Surface Container High) -->
-        <div class="grid-4 gap-4 mb-6 p-4 bg-soft rounded-lg border">
-            <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">상태 (Status)</span>
-                <div class="flex items-center gap-2">
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>수집기</th>
+                <th>활성화</th>
+                <th>상태</th>
+                <th>수집 설정</th>
+                <th>실행현황</th>
+                <th>관리</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for src in sources %}
+            <tr>
+                <td>
+                    <div class="font-bold text-sm">{{ src.label }}</div>
+                    <div class="text-xs text-muted">{{ src.api_desc }}</div>
+                </td>
+                <td>
+                    <form action="/toggle_collector" method="post" style="margin:0;">
+                        <input type="hidden" name="source" value="{{ src.key }}">
+                        <label class="toggle-switch" title="{{ '클릭하여 비활성화' if src.enabled else '클릭하여 활성화' }}">
+                            <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if src.enabled else '' }} aria-label="{{ src.label }} 수집기 토글">
+                            <span class="slider"></span>
+                        </label>
+                    </form>
+                </td>
+                <td>
                     <span class="badge {{ 'badge-success' if src.last_status == 'SUCCESS' or 'SUCCESS' in src.last_status else 'badge-danger' if src.last_status == 'FAIL' else 'badge-neutral' }}">
                         {{ src.last_status or '대기중' }}
                     </span>
-                    <!-- Manual Trigger Button -->
-                    <form action="/trigger" method="post" class="inline-flex">
-                        <button type="submit" name="job" value="{{ src.trigger_val }}" 
-                                title="데이터 새로고침 (즉시 실행)" 
-                                class="btn-icon rounded-full {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}" 
-                                {{ 'disabled' if not src.enabled else '' }} 
+                </td>
+                <td>
+                    <div class="text-xs text-muted">주기: <span class="font-bold">{{ src.freq_value|upper }}</span></div>
+                    <div class="text-xs text-muted">기간: <span class="font-bold">{% if src.period_value == '0' %}전체{% else %}{{ src.period_value }}개월{% endif %}</span></div>
+                </td>
+                <td>
+                    <div class="text-xs text-muted">최근: <span class="font-mono font-bold">{{ src.last_run }}</span></div>
+                    <div class="text-xs text-muted">다음: <span class="font-mono font-bold">{{ src.next_run }}</span></div>
+                    <div class="text-xs text-muted">누적: <a href="{{ url_for('view_data', table_name='collection_logs', search_col='target_source', search_val=src.log_source) }}" class="font-mono font-bold">{{ src.total_count }}</a></div>
+                </td>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <form action="/trigger" method="post" class="inline-flex">
+                            <button type="submit" name="job" value="{{ src.trigger_val }}"
+                                    title="데이터 새로고침 (즉시 실행)"
+                                    class="btn-icon {{ 'opacity-50 cursor-not-allowed' if not src.enabled else '' }}"
+                                    {{ 'disabled' if not src.enabled else '' }}
+                                    style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                            </button>
+                        </form>
+                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.remove('hidden')" class="btn-icon" title="수집기 수정"
                                 style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                    </form>
-                </div>
-            </div>
-            <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">최근 실행</span>
-                <span class="text-sm font-bold text-main font-mono">{{ src.last_run }}</span>
-            </div>
-            <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium uppercase tracking-wider">다음 실행</span>
-                <span class="text-sm font-bold text-primary font-mono">{{ src.next_run }}</span>
-            </div>
-            <a href="{{ url_for('view_data', table_name='collection_logs', search_col='target_source', search_val=src.log_source) }}" class="flex flex-col gap-1 text-decoration-none" style="text-decoration: none;" title="전체 로그 보기">
-                <div class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium uppercase tracking-wider">누적 데이터</span>
-                    <span class="text-sm font-bold text-primary font-mono">{{ src.total_count }}</span>
-                </div>
-            </a>
-        </div>
-
-        <!-- Configuration Display (Read-Only) -->
-        <div class="space-y-4 relative" style="z-index: 20;">
-            <!-- API Endpoint (Read-only) -->
-            <div>
-                <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
-                <input type="text" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly>
-            </div>
-
-            <!-- API Key Input -->
-            <div>
-                <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
-                <div class="relative">
-                    <input type="password" value="{{ src.api_value }}" class="form-input text-sm w-full font-mono bg-soft text-muted" readonly disabled>
-                </div>
-                <p class="help-text mt-1">해당 기관에서 발급받은 API Key가 있어야 데이터 수집이 가능합니다.</p>
-            </div>
-            
-            <div class="grid-2 gap-4">
-                <!-- Frequency Selection (Chips) -->
-                <div>
-                    <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
-                    <div class="flex gap-2">
-                        {% set f_val = src.freq_value %}
-                        <span class="badge badge-neutral">{{ f_val|upper }}</span>
-                        {% if f_val == 'daily' and src.time_value %}<span class="text-sm text-sub">{{ src.time_value }}</span>{% endif %}
-                        {% if f_val == 'weekly' and src.weekday_value %}<span class="text-sm text-sub">{{ src.weekday_value|upper }}</span>{% endif %}
-                        {% if f_val == 'monthly' and src.day_value %}<span class="text-sm text-sub">Day {{ src.day_value }}</span>{% endif %}
+                        <button type="button" onclick="openDeleteSourceModal('{{ src.key }}', '{{ src.label }}')" class="btn-icon text-danger" title="수집기 삭제"
+                                style="width: 32px; height: 32px; padding: 0; min-width: 32px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                     </div>
-                    <p class="help-text mt-1">데이터 갱신 빈도를 설정합니다.</p>
-                </div>
-                
-                <!-- Period Selection (Chips + Custom Input) -->
-                <div>
-                    <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
-                    <div class="flex gap-2">
-                        {% if src.period_value == '0' %}
-                            <span class="badge badge-neutral">전체</span>
-                        {% else %}
-                            <span class="badge badge-neutral">{{ src.period_value }}개월</span>
-                        {% endif %}
-                    </div>
-                    <p class="help-text mt-1">과거 데이터를 얼마나 가져올지 설정합니다. (0=전체)</p>
-                </div>
-            </div>
-
-            <div class="flex justify-end pt-2">
-                <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.remove('hidden')" class="btn-tonal">
-                    설정 수정
-                </button>
-            </div>
-        </div>
-
-        <!-- Disabled Overlay (M3 State Layer) -->
-        {% if not src.enabled %}
-        <div class="card-disabled-overlay">
-            <div class="card-disabled-label">
-                수집 비활성화됨
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% for src in sources %}
         <div id="editSourceModal_{{ src.key }}" class="modal-overlay hidden">
-            <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h3>수집기 수정: {{ src.label }}</h3>
                     <button onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="close-btn">&times;</button>
                 </div>
-                <form action="/collection-management/config" method="post" class="modal-body space-y-4">
-                    <!-- API Endpoint -->
-                    <div>
-                        <label class="form-label text-xs uppercase text-muted mb-2">API Endpoint</label>
-                        <input type="text" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input text-sm w-full font-mono bg-input" placeholder="https://api.example.com/...">
+                <form action="/collection-management/config" method="post" class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">수집기 이름 (Label)</label>
+                        <input type="text" value="{{ src.label }}" class="form-input" readonly style="background: var(--bg-soft); cursor: default; color: var(--text-muted);">
                     </div>
 
-                    <!-- API Key Input -->
-                    <div>
-                        <label class="form-label text-xs uppercase text-muted mb-2" for="input_{{ src.key }}">API Key (인증키)</label>
+                    <div class="form-group">
+                        <label class="form-label">설명 (Description)</label>
+                        <input type="text" name="description_{{ src.key }}" value="{{ src.api_desc }}" class="form-input" placeholder="예: 국토부 API 연동">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">API Endpoint URL</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="endpoint_{{ src.key }}" name="endpoint_{{ src.key }}" value="{{ src.endpoint or '' }}" class="form-input flex-1 font-mono" placeholder="예: https://api.example.com/v1/data">
+                            <button type="button" onclick="verifyApi('endpoint_{{ src.key }}', 'input_{{ src.key }}', 'verifyResult_{{ src.key }}')" class="btn-tonal">검증</button>
+                        </div>
+                        <p id="verifyResult_{{ src.key }}" class="text-xs mt-1" style="display:none;"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="input_{{ src.key }}">API Key (인증키)</label>
                         <div class="relative">
-                            <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}" 
-                                   placeholder="인증키를 입력하세요" class="form-input text-sm w-full font-mono bg-input pr-10">
-                            <span onclick="togglePassword('input_{{ src.key }}', this)" 
-                                  class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted" 
+                            <input type="password" id="input_{{ src.key }}" name="{{ src.api_field }}" value="{{ src.api_value }}"
+                                   placeholder="인증키 입력" class="form-input font-mono pr-10">
+                            <span onclick="togglePassword('input_{{ src.key }}', this)"
+                                  class="password-toggle-icon absolute right-3 top-50p translate-y-50n cursor-pointer text-muted"
                                   title="키 보기/숨기기" role="button" tabindex="0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             </span>
                         </div>
                     </div>
-                    
-                    <div class="grid-2 gap-4">
-                        <!-- Frequency Selection -->
-                        <div>
-                            <label class="form-label text-xs uppercase text-muted mb-2">수집 주기</label>
-                            <div class="radio-group">
-                                {% set f_val = src.freq_value %}
-                                {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
-                                {% for val, label in freq_options %}
-                                <label class="radio-chip">
-                                    <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" {% if f_val == val %}checked{% endif %}>
-                                    <span>{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <!-- Period Selection -->
-                        <div>
-                            <label class="form-label text-xs uppercase text-muted mb-2">수집 기간</label>
-                            <div class="radio-group">
-                                {% set p_val = src.period_value | int %}
-                                {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
-                                {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
-                                {% for val, label in options %}
-                                <label class="radio-chip">
-                                    <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}" 
-                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                           {% if p_val == val %}checked{% endif %}>
-                                    <span>{{ label }}</span>
-                                </label>
-                                {% endfor %}
-                                <label class="radio-chip">
-                                    <input type="radio" name="{{ src.period_field }}_opt" value="custom" 
-                                           onchange="togglePeriodInput(this, '{{ src.period_field }}')"
-                                           {% if is_custom %}checked{% endif %}>
-                                    <span>기타</span>
-                                </label>
-                            </div>
-                            <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}" 
-                                   min="0" max="60" class="form-input text-sm w-full mt-2" 
-                                   style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+
+                    <div class="form-group">
+                        <label class="form-label">수집 주기</label>
+                        <div class="radio-group">
+                            {% set f_val = src.freq_value %}
+                            {% set freq_options = [('daily', '매일'), ('weekly', '매주'), ('monthly', '매월')] %}
+                            {% for val, label in freq_options %}
+                            <label class="radio-chip">
+                                <input type="radio" name="{{ src.freq_field }}" value="{{ val }}" {% if f_val == val %}checked{% endif %}>
+                                <span>{{ label }}</span>
+                            </label>
+                            {% endfor %}
                         </div>
                     </div>
 
-                    <div class="flex justify-end pt-4 border-t border-light mt-4">
-                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal mr-2">취소</button>
+                    <div class="form-group">
+                        <label class="form-label">수집 기간</label>
+                        <div class="radio-group">
+                            {% set p_val = src.period_value | int %}
+                            {% set options = [(0, '전체'), (1, '1개월'), (3, '3개월'), (6, '6개월'), (12, '1년')] %}
+                            {% set is_custom = p_val not in [0, 1, 3, 6, 12] %}
+                            {% for val, label in options %}
+                            <label class="radio-chip">
+                                <input type="radio" name="{{ src.period_field }}_opt" value="{{ val }}"
+                                       onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                       {% if p_val == val %}checked{% endif %}>
+                                <span>{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                            <label class="radio-chip">
+                                <input type="radio" name="{{ src.period_field }}_opt" value="custom"
+                                       onchange="togglePeriodInput(this, '{{ src.period_field }}')"
+                                       {% if is_custom %}checked{% endif %}>
+                                <span>기타</span>
+                            </label>
+                        </div>
+                        <input type="number" id="{{ src.period_field }}" name="{{ src.period_field }}" value="{{ src.period_value }}"
+                               min="0" max="60" class="form-input w-full mt-2"
+                               style="{{ 'display:none;' if not is_custom else '' }}" placeholder="개월 수 입력">
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button type="button" onclick="document.getElementById('editSourceModal_{{ src.key }}').classList.add('hidden')" class="btn-tonal">취소</button>
                         <button type="submit" class="btn-primary">설정 저장</button>
                     </div>
                 </form>
@@ -1557,42 +1572,45 @@ templates_to_create = {
             </div>
             <div class="form-group">
                 <label class="form-label">API Endpoint URL</label>
-                <input type="text" name="endpoint" class="form-input" placeholder="예: https://api.example.com/v1/data">
+                <div class="flex gap-2">
+                    <input type="text" id="new_endpoint" name="endpoint" class="form-input flex-1 font-mono" placeholder="예: https://api.example.com/v1/data">
+                    <button type="button" onclick="verifyNewApi()" class="btn-tonal">검증</button>
+                </div>
+                <p id="newVerifyResult" class="text-xs mt-1" style="display:none;"></p>
             </div>
-            
+
             <!-- Extended Configuration Fields -->
             <div class="form-group">
                 <label class="form-label">API Key (인증키)</label>
-                <input type="password" name="api_key" class="form-input" placeholder="인증키 입력">
+                <input type="password" id="new_api_key" name="api_key" class="form-input" placeholder="인증키 입력">
             </div>
             
-            <div class="grid-2 gap-4">
-                <div>
-                    <label class="form-label">수집 주기</label>
-                    <div class="radio-group">
-                        <label class="radio-chip"><input type="radio" name="frequency" value="daily" checked><span>매일</span></label>
-                        <label class="radio-chip"><input type="radio" name="frequency" value="weekly"><span>매주</span></label>
-                        <label class="radio-chip"><input type="radio" name="frequency" value="monthly"><span>매월</span></label>
-                    </div>
+            <div class="form-group">
+                <label class="form-label">수집 주기</label>
+                <div class="radio-group">
+                    <label class="radio-chip"><input type="radio" name="frequency" value="daily" checked><span>매일</span></label>
+                    <label class="radio-chip"><input type="radio" name="frequency" value="weekly"><span>매주</span></label>
+                    <label class="radio-chip"><input type="radio" name="frequency" value="monthly"><span>매월</span></label>
                 </div>
-                <div>
-                    <label class="form-label">수집 기간</label>
-                    <div class="radio-group">
-                        <label class="radio-chip">
-                            <input type="radio" name="period_opt" value="0" onchange="togglePeriodInput(this, 'new_period_input')" checked>
-                            <span>전체</span>
-                        </label>
-                        <label class="radio-chip">
-                            <input type="radio" name="period_opt" value="1" onchange="togglePeriodInput(this, 'new_period_input')">
-                            <span>1개월</span>
-                        </label>
-                        <label class="radio-chip">
-                            <input type="radio" name="period_opt" value="custom" onchange="togglePeriodInput(this, 'new_period_input')">
-                            <span>기타</span>
-                        </label>
-                    </div>
-                    <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input text-sm w-full mt-2" style="display:none;" placeholder="개월 수 입력">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">수집 기간</label>
+                <div class="radio-group">
+                    <label class="radio-chip">
+                        <input type="radio" name="period_opt" value="0" onchange="togglePeriodInput(this, 'new_period_input')" checked>
+                        <span>전체</span>
+                    </label>
+                    <label class="radio-chip">
+                        <input type="radio" name="period_opt" value="1" onchange="togglePeriodInput(this, 'new_period_input')">
+                        <span>1개월</span>
+                    </label>
+                    <label class="radio-chip">
+                        <input type="radio" name="period_opt" value="custom" onchange="togglePeriodInput(this, 'new_period_input')">
+                        <span>기타</span>
+                    </label>
                 </div>
+                <input type="number" id="new_period_input" name="period" value="0" min="0" max="60" class="form-input w-full mt-2" style="display:none;" placeholder="개월 수 입력">
             </div>
 
             <div class="flex justify-end gap-2 mt-4">
@@ -1627,6 +1645,53 @@ templates_to_create = {
 </div>
 
 <script>
+function verifyApi(endpointId, apiKeyId, resultId) {
+    var endpoint = document.getElementById(endpointId) ? document.getElementById(endpointId).value : '';
+    var apiKeyEl = document.getElementById(apiKeyId);
+    var apiKey = apiKeyEl ? apiKeyEl.value : '';
+    var resultEl = document.getElementById(resultId);
+
+    if (!endpoint.trim()) {
+        resultEl.style.display = 'block';
+        resultEl.textContent = 'API Endpoint URL을 입력해주세요.';
+        resultEl.style.color = 'var(--danger)';
+        resultEl.dataset.verified = 'false';
+        return;
+    }
+    resultEl.style.display = 'block';
+    resultEl.textContent = '검증 중...';
+    resultEl.style.color = 'var(--text-muted)';
+
+    fetch('/collection-management/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'endpoint=' + encodeURIComponent(endpoint) + '&api_key=' + encodeURIComponent(apiKey)
+    })
+    .then(r => r.json())
+    .then(data => {
+        resultEl.style.display = 'block';
+        if (data.success) {
+            resultEl.textContent = '✓ ' + data.message;
+            resultEl.style.color = 'var(--success, #2e7d32)';
+            resultEl.dataset.verified = 'true';
+        } else {
+            resultEl.textContent = '✗ ' + data.message;
+            resultEl.style.color = 'var(--danger)';
+            resultEl.dataset.verified = 'false';
+        }
+    })
+    .catch(() => {
+        resultEl.style.display = 'block';
+        resultEl.textContent = '✗ 검증 요청 중 오류가 발생했습니다.';
+        resultEl.style.color = 'var(--danger)';
+        resultEl.dataset.verified = 'false';
+    });
+}
+
+function verifyNewApi() {
+    verifyApi('new_endpoint', 'new_api_key', 'newVerifyResult');
+}
+
 function togglePeriodInput(radio, targetId) {
     var input = document.getElementById(targetId);
     if (radio.value === 'custom') {
@@ -1652,10 +1717,16 @@ function openAddSourceModal() {
     document.getElementById('addSourceModal').classList.remove('hidden');
     document.getElementById('newSourceLabel').value = '';
     document.getElementById('newSourceDesc').value = '';
+    document.getElementById('new_endpoint').value = '';
+    document.getElementById('new_api_key').value = '';
     document.getElementById('newSourceLabel').classList.remove('border-danger');
     document.getElementById('newSourceDesc').classList.remove('border-danger');
     document.getElementById('labelError').style.display = 'none';
     document.getElementById('descError').style.display = 'none';
+    var vr = document.getElementById('newVerifyResult');
+    vr.style.display = 'none';
+    vr.textContent = '';
+    vr.dataset.verified = 'false';
 }
 function closeAddSourceModal() {
     document.getElementById('addSourceModal').classList.add('hidden');
@@ -1682,6 +1753,19 @@ function submitAddSource() {
         descError.style.display = 'block';
         isValid = false;
     }
+    // Endpoint가 입력된 경우 검증 완료 여부 확인
+    if (isValid) {
+        var endpointInput = document.getElementById('new_endpoint');
+        var verifyResult = document.getElementById('newVerifyResult');
+        if (endpointInput && endpointInput.value.trim()) {
+            if (!verifyResult || verifyResult.dataset.verified !== 'true') {
+                verifyResult.style.display = 'block';
+                verifyResult.textContent = 'API Endpoint를 먼저 검증해주세요.';
+                verifyResult.style.color = 'var(--danger)';
+                isValid = false;
+            }
+        }
+    }
     if (isValid) document.getElementById('addSourceForm').submit();
 }
 
@@ -1696,26 +1780,18 @@ function closeDeleteSourceModal() {
 </script>
 {% endblock %}""",
     'credit_weights.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
 <h1>신용평가 가중치 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Policy Guide</span>
-            <h3 class="font-bold text-sm">신용 평가 가중치 설정</h3>
-        </div>
-        <div class="text-sm text-sub space-y-2">
-            <p><strong>목적:</strong> AI가 사용자의 신용 점수를 산출할 때 사용하는 핵심 변수의 중요도를 조정합니다.</p>
-            <p><strong>로직:</strong> <code>최종 점수 = (소득점수 × 소득비중) + (고용점수 × 고용비중) + (자산점수 × 자산비중)</code></p>
-            <p><strong>사용 방법:</strong>
-                슬라이더를 움직여 각 항목의 비중을 조절하세요. <strong>세 항목의 합계는 반드시 1.0</strong>이어야 합니다.
-            </p>
-        </div>
-    </div>
-</div>
-
-<p class="text-sub mb-6">신용 평가 로직의 구성 요소를 수치화하여 조절합니다. 변경 사항은 대출 추천 결과에 즉시 반영됩니다.</p>
+{{ guide_card("Policy Guide", "신용 평가 가중치 설정",
+    "AI가 사용자의 신용 점수를 산출할 때 사용하는 핵심 변수의 중요도를 조정합니다. 변경 사항은 대출 추천 결과에 즉시 반영됩니다.",
+    [
+        {"title": "가중치 조절", "desc": "소득·고용·자산 비중을 슬라이더로 조정합니다."},
+        {"title": "합계 검증", "desc": "세 항목의 합계가 반드시 1.0인지 확인합니다."},
+        {"title": "설정 저장", "desc": "변경한 가중치를 저장해 추천 결과에 즉시 반영합니다."}
+    ],
+    note="<code>최종 점수 = (소득점수 × 소득비중) + (고용점수 × 고용비중) + (자산점수 × 자산비중)</code>") }}
 
 <form method="post">
     <!-- 섹션 1: 핵심 가중치 -->
@@ -1822,27 +1898,17 @@ function syncFromNum(which) {
 </script>
 {% endblock %}""",
     'recommend_settings.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
 <h1>대출 추천 알고리즘 설정</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Algorithm Guide</span>
-            <h3 class="font-bold text-sm">대출 추천 알고리즘 설정</h3>
-        </div>
-        <div class="text-sm text-sub space-y-2">
-            <p><strong>목적:</strong> 사용자에게 대출 상품을 추천할 때의 우선순위와 필터링 규칙을 정의합니다.</p>
-            <p><strong>사용 방법:</strong>
-                1. <strong>최대 추천 수:</strong> 사용자 화면에 보여줄 상품 개수를 제한합니다.<br>
-                2. <strong>정렬 우선순위:</strong> '금리 낮은 순' 또는 '한도 높은 순' 중 기본 정렬 방식을 선택합니다.<br>
-                3. <strong>금리 민감도:</strong> 신용 점수에 따라 금리가 변동되는 폭을 조절합니다. (1.0 = 기본)
-            </p>
-        </div>
-    </div>
-</div>
-
-<div class="info-banner">이 설정은 사용자에게 노출되는 대출 추천 목록의 정렬 방식, 표시 개수, 조건 미달 시 처리 방법을 제어합니다. 변경 사항은 저장 즉시 추천 API에 적용됩니다.</div>
+{{ guide_card("Algorithm Guide", "대출 추천 알고리즘 설정",
+    "사용자에게 대출 상품을 추천할 때의 우선순위와 필터링 규칙을 정의합니다. 변경 사항은 저장 즉시 추천 API에 적용됩니다.",
+    [
+        {"title": "최대 추천 수", "desc": "사용자 화면에 보여줄 상품 개수를 제한합니다."},
+        {"title": "정렬 우선순위", "desc": "'금리 낮은 순' 또는 '한도 높은 순' 중 기본 정렬 방식을 선택합니다."},
+        {"title": "금리 민감도", "desc": "신용 점수에 따라 금리가 변동되는 폭을 조절합니다. (1.0 = 기본)"}
+    ]) }}
 
 <form method="post">
     <div class="card card-p mb-6">
@@ -1882,37 +1948,22 @@ function syncFromNum(which) {
 </form>
 {% endblock %}""",
     'products.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
 {% block content %}
 <h1>대출 상품 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">운영 관리</span>
-            <h3 class="font-bold text-sm">상품 노출 제어</h3>
-        </div>
-        <p class="text-sm text-sub">
-            수집된 금융 상품 중 일시적으로 판매가 중단되거나 정책상 노출을 제한해야 하는 경우가 발생합니다. 관리자가 직접 상품의 노출 여부를 제어함으로써, 사용자에게 <strong>유효하고 정확한 정보</strong>만 제공되도록 관리합니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("운영 관리", "상품 노출 제어",
+    "수집된 금융 상품 중 판매 중단·정책상 노출 제한이 필요한 경우 관리자가 직접 노출 여부를 제어합니다. 비노출 처리된 상품은 추천 결과에서 제외됩니다.",
+    [
+        {"title": "상품 조회", "desc": "현재 수집된 금융 상품 목록과 노출 상태를 확인합니다."},
+        {"title": "노출 제어", "desc": "토글 스위치로 상품의 사용자 노출 여부를 즉시 변경합니다."}
+    ]) }}
 
-<div class="info-banner">수집된 대출 상품의 사용자 노출 여부를 관리합니다. 비노출 처리된 상품은 추천 결과에서 제외됩니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card" title="수집된 대출 상품의 전체 건수입니다.">
-        <div class="summary-label">전체 상품</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card" title="현재 사용자에게 노출 중인 상품 수입니다.">
-        <div class="summary-label">노출 중</div>
-        <div class="summary-value text-success">{{ visible_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">비노출</div>
-        <div class="summary-value text-danger">{{ hidden_count }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 상품", "value": total_count, "title": "수집된 대출 상품의 전체 건수입니다."},
+    {"label": "노출 중", "value": visible_count, "color": "success", "title": "현재 사용자에게 노출 중인 상품 수입니다."},
+    {"label": "비노출", "value": hidden_count, "color": "danger"}
+], "mb-6", title="상품 현황", badge="Products") }}
 
 <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
     <form method="get" class="flex gap-2 items-center flex-wrap">
@@ -1964,21 +2015,18 @@ function syncFromNum(which) {
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">등록된 상품이 없습니다.</td></tr>
+            {{ empty_state(7, "등록된 상품이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('products', page=page-1, search=search) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('products', page=page+1, search=search) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('products', page=page-1, search=search),
+    url_for('products', page=page+1, search=search)) }}
 {% endblock %}""",
     'missions.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state, pagination %}
 {% block content %}
 <div class="flex justify-between items-center mb-2">
     <h1>미션 관리</h1>
@@ -1990,55 +2038,22 @@ function syncFromNum(which) {
     </a>
 </div>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">행동 경제학 적용</span>
-            <h3 class="font-bold text-sm">금융 행동 변화 유도 (Nudge)</h3>
-        </div>
-        <p class="text-sm text-sub">
-            TrustFin은 단순히 대출을 추천하는 것을 넘어, 사용자가 <strong>더 나은 금융 조건</strong>을 갖추도록 돕습니다. AI가 분석한 사용자의 취약점(예: 낮은 신용점수, 부족한 자산)을 보완할 수 있는 구체적인 행동을 <strong>'미션'</strong> 형태로 제안합니다. <br>이 페이지에서는 생성된 미션들의 현황을 모니터링하여, 사용자들이 실제로 금융 행동을 변화시키고 있는지 파악합니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("행동 경제학 적용", "금융 행동 변화 유도 (Nudge)",
+    "AI가 분석한 사용자의 취약점(예: 낮은 신용점수, 부족한 자산)을 보완할 수 있는 구체적인 행동을 '미션' 형태로 제안합니다. 생성된 미션 현황을 모니터링하여 사용자들의 금융 행동 변화를 파악합니다.",
+    [
+        {"title": "미션 현황 조회", "desc": "AI가 자동 생성한 미션의 달성 상태와 통계를 확인합니다."},
+        {"title": "미션 관리", "desc": "개별 미션의 상태를 검토하고 필요 시 삭제합니다."}
+    ]) }}
 
-<div class="info-banner">AI가 유저의 대출 목적과 재무 상황을 바탕으로 자동 생성한 미션 목록입니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">전체 미션</div>
-        <div class="summary-value">{{ total }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">대기(pending)</div>
-        <div class="summary-value text-sub">{{ pending }}</div>
-        <a href="{{ url_for('missions', status_filter='pending') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">진행(in_progress)</div>
-        <div class="summary-value text-primary">{{ in_progress }}</div>
-        <a href="{{ url_for('missions', status_filter='in_progress') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">완료(completed)</div>
-        <div class="summary-value text-success">{{ completed }}</div>
-        <a href="{{ url_for('missions', status_filter='completed') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">만료(expired)</div>
-        <div class="summary-value text-danger">{{ expired }}</div>
-        <a href="{{ url_for('missions', status_filter='expired') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">포기(given_up)</div>
-        <div class="summary-value text-sub">{{ given_up }}</div>
-        <a href="{{ url_for('missions', status_filter='given_up') }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">모아보기</a>
-    </div>
-    <div class="summary-card" title="{{ type_completion_tooltip }}">
-        <div class="summary-label">완료율</div>
-        <div class="summary-value text-primary">{{ "%.1f" | format(completion_rate) }}%</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 미션", "value": total},
+    {"label": "대기(pending)", "value": pending, "color": "sub", "link": url_for('missions', status_filter='pending')},
+    {"label": "진행(in_progress)", "value": in_progress, "color": "primary", "link": url_for('missions', status_filter='in_progress')},
+    {"label": "완료(completed)", "value": completed, "color": "success", "link": url_for('missions', status_filter='completed')},
+    {"label": "만료(expired)", "value": expired, "color": "danger", "link": url_for('missions', status_filter='expired')},
+    {"label": "포기(given_up)", "value": given_up, "color": "sub", "link": url_for('missions', status_filter='given_up')},
+    {"label": "완료율", "value": "%.1f" | format(completion_rate) ~ "%", "color": "primary", "title": type_completion_tooltip}
+], "mb-6", title="미션 현황", badge="Missions") }}
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary text-sm mt-0">유형별 분포</h3>
@@ -2171,37 +2186,23 @@ function syncFromNum(which) {
                 <td><span class="badge badge-info">{{ m.mission_type }}</span></td>
                 <td>{{ m.loan_purpose or '-' }}</td>
                 <td>
-                    {% if m.status == 'completed' %}
-                        <span class="badge badge-success">completed</span>
-                    {% elif m.status == 'in_progress' %}
-                        <span class="badge badge-info">in_progress</span>
-                    {% elif m.status == 'expired' %}
-                        <span class="badge badge-danger">expired</span>
-                    {% elif m.status == 'given_up' %}
-                        <span class="badge badge-neutral">given_up</span>
-                    {% else %}
-                        <span class="badge badge-warning">pending</span>
-                    {% endif %}
+                    {{ status_badge(m.status) }}
                 </td>
                 <td>{{ m.difficulty }}</td>
                 <td>{{ m.reward_points }}</td>
                 <td>{{ m.due_date or '-' }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="10" class="text-center text-sub p-4">미션이 없습니다.</td></tr>
+            {{ empty_state(10, "미션이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 </form>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('missions', page=page-1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('missions', page=page+1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('missions', page=page-1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order),
+    url_for('missions', page=page+1, status_filter=status_filter, type_filter=type_filter, difficulty_filter=difficulty_filter, sort_by=sort_by, order=order)) }}
 
 <!-- Bulk Update Modal -->
 <div id="bulkUpdateModal" class="modal-overlay hidden" onclick="if(event.target === this) closeBulkUpdateModal()">
@@ -2291,21 +2292,17 @@ function submitBulkDelete() {
 </script>
 {% endblock %}""",
     'mission_deletion_logs.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, empty_state %}
 {% block content %}
 <h1>삭제된 미션 로그</h1>
 <a href="/missions" class="nav-btn mb-4">미션 목록으로 돌아가기</a>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Audit Log</span>
-            <h3 class="font-bold text-sm">삭제 이력 감사</h3>
-        </div>
-        <p class="text-sm text-sub">
-            삭제된 미션의 상세 정보와 삭제 사유를 조회합니다. 이는 데이터 복구 요청 대응이나 운영 감사를 위한 백업 데이터입니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("Audit Log", "삭제 이력 감사",
+    "삭제된 미션의 상세 정보와 삭제 사유를 조회하여 데이터 복구 요청 대응이나 운영 감사에 활용합니다.",
+    [
+        {"title": "이력 조회", "desc": "삭제된 미션의 일시·사유·대상 사용자를 확인합니다."},
+        {"title": "감사 활용", "desc": "데이터 복구 요청 또는 운영 감사 시 참고 자료로 사용합니다."}
+    ]) }}
 
 <div class="table-wrapper">
     <table class="w-full">
@@ -2336,13 +2333,14 @@ function submitBulkDelete() {
                 <td>{{ log.deleted_at }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="10" class="text-center text-sub p-4">삭제 로그가 없습니다.</td></tr>
+            {{ empty_state(10, "삭제 로그가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% endblock %}""",
     'mission_detail.html': """{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state %}
 {% block content %}
 <h1>미션 상세</h1>
 <a href="/missions" class="nav-btn mb-4">목록으로 돌아가기</a>
@@ -2501,19 +2499,7 @@ function submitBulkDelete() {
                 {% for u in related_users %}
                 <tr class="{{ 'bg-soft' if u.mission_id == mission.mission_id else '' }}">
                     <td class="font-bold">{{ u.user_id }}</td>
-                    <td class="text-center">
-                        {% if u.status == 'completed' %}
-                            <span class="badge badge-success">completed</span>
-                        {% elif u.status == 'in_progress' %}
-                            <span class="badge badge-info">in_progress</span>
-                        {% elif u.status == 'expired' %}
-                            <span class="badge badge-danger">expired</span>
-                        {% elif u.status == 'given_up' %}
-                            <span class="badge badge-neutral">given_up</span>
-                        {% else %}
-                            <span class="badge badge-warning">pending</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(u.status) }}</td>
                     <td>{{ u.created_at }}</td>
                     <td>{{ u.completed_at or '-' }}</td>
                     <td class="text-center">
@@ -2525,7 +2511,7 @@ function submitBulkDelete() {
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" class="text-center text-sub p-4">수행 중인 다른 유저가 없습니다.</td></tr>
+                {{ empty_state(5, "수행 중인 다른 유저가 없습니다.") }}
                 {% endfor %}
             </tbody>
         </table>
@@ -2551,7 +2537,7 @@ function submitBulkDelete() {
                     <td>{{ h.description }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="text-center text-sub p-4">변경 이력이 없습니다.</td></tr>
+                {{ empty_state(4, "변경 이력이 없습니다.") }}
                 {% endfor %}
             </tbody>
         </table>
@@ -2567,27 +2553,17 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'points.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
 {% block content %}
 <h1>포인트 생애주기 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Tokenomics</span>
-            <h3 class="font-bold text-sm">포인트 순환 구조 (Lifecycle)</h3>
-        </div>
-        <div class="text-sm text-sub space-y-2">
-            <p>TrustFin 포인트 시스템은 <strong>발행(Minting) → 지급(Allocation) → 유통(Circulation) → 소각(Burn)</strong>의 생애주기를 가집니다.</p>
-            <ul style="list-style-type: disc; padding-left: 20px; margin: 0;">
-                <li><strong>지급 (Earning):</strong> 미션 달성 시 시스템 풀에서 사용자에게 포인트가 지급됩니다. (동기 부여)</li>
-                <li><strong>사용 (Spending):</strong> 포인트 상품 구매 시 포인트가 회수되어 소각됩니다. (가치 실현)</li>
-                <li><strong>소멸/회수 (Expiration/Clawback):</strong> 유효기간 만료 또는 어뷰징 적발 시 포인트를 회수하여 총 유통량을 조절합니다.</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<div class="info-banner">전체 포인트의 공급량과 유통량을 모니터링하고, 개별 유저의 포인트 흐름을 제어합니다.</div>
+{{ guide_card("Tokenomics", "포인트 순환 구조 (Lifecycle)",
+    "TrustFin 포인트 시스템은 <strong>발행 → 지급 → 유통 → 소각</strong>의 생애주기를 가집니다. 전체 포인트 공급량·유통량을 모니터링하고 개별 유저의 포인트 흐름을 제어합니다.",
+    [
+        {"title": "지급 (Earning)", "desc": "미션 달성 시 시스템 풀에서 사용자에게 포인트가 지급됩니다."},
+        {"title": "사용 (Spending)", "desc": "포인트 상품 구매 시 포인트가 회수되어 소각됩니다."},
+        {"title": "소멸/회수", "desc": "유효기간 만료 또는 어뷰징 적발 시 포인트를 회수해 총 유통량을 조절합니다."}
+    ]) }}
 
 <form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
     <span class="font-semibold text-sub">기간 설정:</span>
@@ -2599,34 +2575,14 @@ function submitBulkDelete() {
     <a href="/points" class="nav-btn">전체 기간</a>
 </form>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">총 발행량 (Minted)</div>
-        <div class="summary-value text-success">{{ "{:,}".format(total_minted) }}</div>
-        <p class="help-text">지급된 포인트 총액</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">현재 유통량 (Circulating)</div>
-        <div class="summary-value text-primary">{{ "{:,}".format(total_balance) }}</div>
-        <p class="help-text">현재 유저 보유 잔액 (Snapshot)</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용 (Spent)</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(total_spent_purchase) }}</div>
-        <p class="help-text">상품 구매로 소각된 포인트</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">기타 감소 (Clawback/Expired)</div>
-        <div class="summary-value text-sub">{{ "{:,}".format(total_clawback + total_expired) }}</div>
-        <p class="help-text" title="회수: {{ '{:,}'.format(total_clawback) }} / 소멸: {{ '{:,}'.format(total_expired) }}">
-            회수: {{ "{:,}".format(total_clawback) }} / 소멸: {{ "{:,}".format(total_expired) }}</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">참여 유저 수</div>
-        <div class="summary-value">{{ user_count }}</div>
-        <p class="help-text">포인트 시스템 활성 유저</p>
-    </div>
-</div>
+{% set clawback_help = "회수: " ~ "{:,}".format(total_clawback) ~ " / 소멸: " ~ "{:,}".format(total_expired) %}
+{{ summary_grid([
+    {"label": "총 발행량 (Minted)", "value": "{:,}".format(total_minted), "color": "success", "help": "지급된 포인트 총액"},
+    {"label": "현재 유통량 (Circulating)", "value": "{:,}".format(total_balance), "color": "primary", "help": "현재 유저 보유 잔액 (Snapshot)"},
+    {"label": "총 사용 (Spent)", "value": "{:,}".format(total_spent_purchase), "color": "danger", "help": "상품 구매로 소각된 포인트"},
+    {"label": "기타 감소 (Clawback/Expired)", "value": "{:,}".format(total_clawback + total_expired), "color": "sub", "help": clawback_help},
+    {"label": "참여 유저 수", "value": user_count, "help": "포인트 시스템 활성 유저"}
+], "mb-6", title="포인트 공급 현황", badge="Points") }}
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary mt-0">포인트 유동성 제어 (Manual Control)</h3>
@@ -2676,40 +2632,28 @@ function submitBulkDelete() {
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="text-center text-sub p-4">포인트 데이터가 없습니다.</td></tr>
+            {{ empty_state(6, "포인트 데이터가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('points', page=page-1, start_date=start_date, end_date=end_date, search_user=search_user) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('points', page=page+1, start_date=start_date, end_date=end_date, search_user=search_user) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('points', page=page-1, start_date=start_date, end_date=end_date, search_user=search_user),
+    url_for('points', page=page+1, start_date=start_date, end_date=end_date, search_user=search_user)) }}
 {% endblock %}""",
     'point_detail.html': """{% extends "base.html" %}
+{% from "macros.html" import summary_grid, empty_state %}
 {% block content %}
 <h1>포인트 상세 - {{ user_id }}</h1>
 <a href="/points" class="nav-btn mb-4">목록으로 돌아가기</a>
 <div class="info-banner">해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.</div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">현재 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value text-success">{{ "{:,}".format(user.total_earned) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(user.total_spent) }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "현재 잔액", "value": "{:,}".format(user.balance)},
+    {"label": "총 지급", "value": "{:,}".format(user.total_earned), "color": "success"},
+    {"label": "총 사용", "value": "{:,}".format(user.total_spent), "color": "danger"}
+], "mb-6", title="포인트 잔액", badge="Balance") }}
 
 <div class="table-wrapper">
     <h3 class="card-title text-primary text-sm mb-3">거래 내역</h3>
@@ -2747,44 +2691,29 @@ function submitBulkDelete() {
                 <td>{{ t.created_at }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">거래 내역이 없습니다.</td></tr>
+            {{ empty_state(7, "거래 내역이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% endblock %}""",
     'point_products.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
 {% block content %}
 <h1>포인트 상품 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">순환 구조</span>
-            <h3 class="font-bold text-sm">포인트의 실질적 가치</h3>
-        </div>
-        <p class="text-sm text-sub">
-            획득한 포인트가 단순한 숫자에 그치지 않고, 실제 생활에 유용한 혜택(쿠폰, 금리 할인권 등)으로 교환될 수 있어야 합니다. 이러한 <strong>선순환 구조</strong>는 사용자가 TrustFin 생태계에 머무르게 하는 핵심 요인이 됩니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("순환 구조", "포인트의 실질적 가치",
+    "획득한 포인트가 쿠폰·금리 할인권 등 실제 혜택으로 교환될 수 있어야 합니다. 이 선순환 구조는 사용자가 TrustFin 생태계에 머무르게 하는 핵심 요인입니다.",
+    [
+        {"title": "상품 조회", "desc": "현재 등록된 포인트 교환 상품 목록을 확인합니다."},
+        {"title": "상품 관리", "desc": "상품을 추가·수정하거나 노출 여부를 변경합니다."}
+    ]) }}
 
-<div class="info-banner">포인트로 교환 가능한 상품을 등록하고 관리합니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">전체 상품</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">활성 상품</div>
-        <div class="summary-value text-success">{{ active_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">비활성 상품</div>
-        <div class="summary-value text-danger">{{ inactive_count }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 상품", "value": total_count},
+    {"label": "활성 상품", "value": active_count, "color": "success"},
+    {"label": "비활성 상품", "value": inactive_count, "color": "danger"}
+], "mb-6", title="포인트 상품 현황", badge="Store") }}
 
 <div class="flex gap-2 mb-6">
     <a href="/point-products/add" class="btn-accent">상품 추가</a>
@@ -2829,19 +2758,15 @@ function submitBulkDelete() {
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">등록된 상품이 없습니다.</td></tr>
+            {{ empty_state(7, "등록된 상품이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('point_products', page=page-1) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('point_products', page=page+1) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('point_products', page=page-1),
+    url_for('point_products', page=page+1)) }}
 {% endblock %}""",
     'point_product_form.html': """{% extends "base.html" %}
 {% block content %}
@@ -2886,21 +2811,16 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'point_purchases.html': """{% extends "base.html" %}
+{% from "macros.html" import summary_grid, status_badge, empty_state %}
 {% block content %}
 <h1>포인트 구매 내역</h1>
 <a href="/point-products" class="nav-btn mb-4">상품 목록으로 돌아가기</a>
 <div class="info-banner">유저들의 포인트 상품 구매 내역을 조회합니다.</div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">총 구매 건수</div>
-        <div class="summary-value">{{ total_purchases }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용 포인트</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(total_points_used) }}P</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "총 구매 건수", "value": total_purchases},
+    {"label": "총 사용 포인트", "value": "{:,}".format(total_points_used) ~ "P", "color": "danger"}
+], "mb-6", title="구매 내역 요약", badge="Purchases") }}
 
 <div class="table-wrapper">
     <table class="w-full">
@@ -2919,56 +2839,33 @@ function submitBulkDelete() {
                 <td class="font-bold">{{ p.user_id }}</td>
                 <td>{{ p.product_name or '(삭제된 상품)' }}</td>
                 <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
-                <td class="text-center">
-                    {% if p.status == 'completed' %}
-                        <span class="badge badge-success">completed</span>
-                    {% elif p.status == 'cancelled' %}
-                        <span class="badge badge-neutral">cancelled</span>
-                    {% else %}
-                        <span class="badge badge-warning">{{ p.status }}</span>
-                    {% endif %}
-                </td>
+                <td class="text-center">{{ status_badge(p.status, "purchase") }}</td>
                 <td>{{ p.purchased_at }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="text-center text-sub p-4">구매 내역이 없습니다.</td></tr>
+            {{ empty_state(6, "구매 내역이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% endblock %}""",
     'members.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state %}
 {% block content %}
 <h1>회원 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">사용자 관리</span>
-            <h3 class="font-bold text-sm">통합적인 사용자 뷰</h3>
-        </div>
-        <p class="text-sm text-sub">
-            사용자의 기본 정보뿐만 아니라, 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리합니다. 이는 개별 사용자에 대한 깊이 있는 이해를 돕고, 향후 <strong>개인화된 서비스</strong>를 제공하기 위한 기초 데이터가 됩니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("사용자 관리", "통합적인 사용자 뷰",
+    "사용자의 기본 정보와 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리하여 개인화된 서비스 제공을 위한 기초 데이터를 확보합니다.",
+    [
+        {"title": "사용자 조회", "desc": "전체 회원 목록을 조회·검색하고 핵심 활동 지표를 확인합니다."},
+        {"title": "정보 관리", "desc": "개별 사용자의 정보를 추가·수정하고 상태를 변경합니다."}
+    ]) }}
 
-<div class="info-banner">등록된 회원을 조회, 검색, 추가, 수정, 상태 변경할 수 있습니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">전체 회원</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">활성 회원</div>
-        <div class="summary-value text-success">{{ active_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">정지 회원</div>
-        <div class="summary-value text-danger">{{ suspended_count }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 회원", "value": total_count},
+    {"label": "활성 회원", "value": active_count, "color": "success"},
+    {"label": "정지 회원", "value": suspended_count, "color": "danger"}
+], "mb-6", title="회원 현황", badge="Members") }}
 
 <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
     <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
@@ -3005,28 +2902,21 @@ function submitBulkDelete() {
                 <td class="font-bold">{{ u.user_name }}</td>
                 <td>{{ u.email or '-' }}</td>
                 <td>{{ u.phone or '-' }}</td>
-                <td class="text-center">
-                    {% if u.status == 'active' %}
-                        <span class="badge badge-success">활성</span>
-                    {% elif u.status == 'suspended' %}
-                        <span class="badge badge-danger">정지</span>
-                    {% else %}
-                        <span class="badge badge-neutral">탈퇴</span>
-                    {% endif %}
-                </td>
+                <td class="text-center">{{ status_badge(u.status, "user") }}</td>
                 <td>{{ u.join_date or '-' }}</td>
                 <td class="text-center">
                     <a href="/members/{{ u.user_id }}" class="btn-tonal btn-sm">상세</a>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">등록된 회원이 없습니다.</td></tr>
+            {{ empty_state(7, "등록된 회원이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% endblock %}""",
     'member_detail.html': """{% extends "base.html" %}
+{% from "macros.html" import summary_grid, status_badge %}
 {% block content %}
 <h1>회원 상세 정보</h1>
 <a href="/members" class="nav-btn mb-4">목록으로 돌아가기</a>
@@ -3052,13 +2942,7 @@ function submitBulkDelete() {
         <div class="card card-p">
             <h3 class="card-title text-primary text-sm mt-0 mb-4">현재 상태</h3>
             <div style="text-align: center; margin-bottom: 1rem;">
-                {% if user.status == 'active' %}
-                    <span class="badge badge-success badge-lg">활성</span>
-                {% elif user.status == 'suspended' %}
-                    <span class="badge badge-danger badge-lg">정지</span>
-                {% else %}
-                    <span class="badge badge-neutral badge-lg">탈퇴</span>
-                {% endif %}
+                {{ status_badge(user.status, "user", "badge-lg") }}
             </div>
             <form action="/members/{{ user.user_id }}/status" method="post" class="flex gap-2">
                 <select name="new_status" class="form-select flex-1">
@@ -3079,20 +2963,11 @@ function submitBulkDelete() {
     </div>
 </div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">포인트 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(points.balance) }}P</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value text-success">{{ "{:,}".format(points.total_earned) }}P</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(points.total_spent) }}P</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "포인트 잔액", "value": "{:,}".format(points.balance) ~ "P"},
+    {"label": "총 지급", "value": "{:,}".format(points.total_earned) ~ "P", "color": "success"},
+    {"label": "총 사용", "value": "{:,}".format(points.total_spent) ~ "P", "color": "danger"}
+], "mb-6", title="포인트 현황", badge="Points") }}
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary mt-0 mb-4">미션 현황 ({{ missions|length }}건)</h3>
@@ -3111,17 +2986,7 @@ function submitBulkDelete() {
                 <tr>
                     <td class="font-bold">{{ m.mission_title }}</td>
                     <td><span class="badge badge-info">{{ m.mission_type }}</span></td>
-                    <td class="text-center">
-                        {% if m.status == 'completed' %}
-                            <span class="badge badge-success">완료</span>
-                        {% elif m.status == 'in_progress' %}
-                            <span class="badge badge-info">진행중</span>
-                        {% elif m.status == 'expired' %}
-                            <span class="badge badge-danger">만료</span>
-                        {% else %}
-                            <span class="badge badge-warning">대기</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(m.status, "mission_ko") }}</td>
                     <td class="text-right font-bold">{{ "{:,}".format(m.reward_points) }}P</td>
                     <td>{{ m.due_date or '-' }}</td>
                 </tr>
@@ -3150,15 +3015,7 @@ function submitBulkDelete() {
                 <tr>
                     <td class="font-bold">{{ p.product_name or '(삭제된 상품)' }}</td>
                     <td class="text-right font-bold">{{ "{:,}".format(p.point_cost) }}P</td>
-                    <td class="text-center">
-                        {% if p.status == 'completed' %}
-                            <span class="badge badge-success">completed</span>
-                        {% elif p.status == 'cancelled' %}
-                            <span class="badge badge-neutral">cancelled</span>
-                        {% else %}
-                            <span class="badge badge-warning">{{ p.status }}</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(p.status, "purchase") }}</td>
                     <td>{{ p.purchased_at }}</td>
                 </tr>
                 {% endfor %}
@@ -3216,22 +3073,16 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'system_info.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
 <h1>시스템 정보</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">시스템 투명성</span>
-            <h3 class="font-bold text-sm">환경 및 인프라 모니터링</h3>
-        </div>
-        <p class="text-sm text-sub">
-            안정적인 서비스 운영을 위해 서버 리소스와 데이터베이스 연결 상태를 투명하게 공개합니다. 이는 시스템의 <strong>가용성(Availability)</strong>을 보장하고, 문제 발생 시 신속하게 대응하기 위한 기초 자료로 활용됩니다.
-        </p>
-    </div>
-</div>
-
-<div class="info-banner">서버 환경 및 애플리케이션 상태 정보를 확인합니다.</div>
+{{ guide_card("시스템 투명성", "환경 및 인프라 모니터링",
+    "서버 리소스와 데이터베이스 연결 상태를 투명하게 공개하여 시스템 가용성(Availability)을 보장하고 문제 발생 시 신속히 대응합니다.",
+    [
+        {"title": "리소스 모니터링", "desc": "CPU·메모리·디스크 등 서버 자원 사용 현황을 확인합니다."},
+        {"title": "DB 상태 확인", "desc": "데이터베이스 연결 상태와 테이블 현황을 점검합니다."}
+    ]) }}
 
 <div class="dashboard-grid">
     <div class="card">
@@ -3259,22 +3110,16 @@ function submitBulkDelete() {
 </div>
 {% endblock %}""",
     'data_viewer.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, empty_state, pagination %}
 {% block content %}
     <h1>수집 데이터 조회: {{ table_name }}</h1>
 
-    <div class="card guide-card">
-        <div class="card-p">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="badge badge-info">데이터 접근성</span>
-                <h3 class="font-bold text-sm">원시 데이터(Raw Data) 조회</h3>
-            </div>
-            <p class="text-sm text-sub">
-                AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 있는 그대로 조회할 수 있습니다. 데이터가 어떻게 저장되고 관리되는지 직접 확인함으로써, 데이터 파이프라인의 <strong>신뢰성</strong>을 검증할 수 있습니다.
-            </p>
-        </div>
-    </div>
-
-    <div class="info-banner">수집된 원시 데이터를 테이블별로 조회합니다.</div>
+    {{ guide_card("데이터 접근성", "원시 데이터(Raw Data) 조회",
+        "AI 모델 학습과 서비스 운영에 사용되는 실제 데이터를 직접 조회하여 데이터 파이프라인의 신뢰성을 검증합니다.",
+        [
+            {"title": "테이블 선택", "desc": "상단 탭에서 조회할 데이터 테이블을 선택합니다."},
+            {"title": "데이터 조회", "desc": "필터 조건을 설정하고 원시 데이터를 조회합니다."}
+        ]) }}
     <div class="mb-4 flex flex-wrap gap-2">
         <a href="/data/raw_loan_products" class="nav-btn {{ 'active' if table_name == 'raw_loan_products' else '' }}">대출 상품</a>
         <a href="/data/raw_economic_indicators" class="nav-btn {{ 'active' if table_name == 'raw_economic_indicators' else '' }}">경제 지표</a>
@@ -3334,40 +3179,27 @@ function submitBulkDelete() {
                     </td>
                     {% endfor %}
                 </tr>
-                {% else %}<tr><td colspan="{{ columns|length }}" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>{% endfor %}
+                {% else %}{{ empty_state(columns|length, "데이터가 없습니다.") }}{% endfor %}
             </tbody>
         </table>
     </div>
-    <div class="flex justify-between items-center mt-4">
-        {% if page > 1 %}<a href="{{ url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">이전</a>
-        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-        <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }} ({{ "{:,}".format(total_count) }}건)</span>
-        {% if page < total_pages %}<a href="{{ url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val) }}" class="nav-btn">다음</a>
-        {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-    </div>
+    {{ pagination(page, total_pages,
+        url_for('view_data', table_name=table_name, page=page-1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val),
+        url_for('view_data', table_name=table_name, page=page+1, sort_by=sort_by, order=order, search_col=search_col, search_val=search_val),
+        "{:,}".format(total_count)) }}
 {% endblock %}""",
     'simulator.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
     <h1>대출 추천 시뮬레이터</h1>
 
-    <div class="card guide-card">
-        <div class="card-p">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="badge badge-info">Simulation Guide</span>
-                <h3 class="font-bold text-sm">대출 추천 시뮬레이터</h3>
-            </div>
-            <div class="text-sm text-sub space-y-2">
-                <p><strong>목적:</strong> 현재 설정된 신용 평가 가중치와 추천 알고리즘이 실제 사용자에게 어떤 결과를 보여줄지 미리 검증합니다.</p>
-                <p><strong>사용 방법:</strong>
-                    왼쪽 폼에 가상의 사용자 프로필(소득, 희망 금액, 직업 등)을 입력하고 '추천 실행' 버튼을 누르세요.<br>
-                    오른쪽 결과 화면에서 추천된 상품 목록과 예상 금리, 그리고 <strong>AI의 추천 사유(XAI)</strong>를 확인할 수 있습니다.
-                </p>
-                <p><strong>참고:</strong> 이 시뮬레이션은 실제 데이터베이스에 저장되지 않는 테스트용입니다.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="info-banner">가상의 유저 프로필을 입력하여 현재 신용평가 가중치 설정이 추천 결과에 어떤 영향을 미치는지 미리 확인할 수 있습니다.</div>
+    {{ guide_card("Simulation Guide", "대출 추천 시뮬레이터",
+        "현재 설정된 신용 평가 가중치와 추천 알고리즘이 실제 사용자에게 어떤 결과를 보여줄지 미리 검증합니다. 이 시뮬레이션은 실제 DB에 저장되지 않는 테스트용입니다.",
+        [
+            {"title": "프로필 입력", "desc": "소득, 희망 금액, 직업 등 가상의 사용자 정보를 입력합니다."},
+            {"title": "추천 실행", "desc": "'추천 실행' 버튼을 눌러 알고리즘을 작동시킵니다."},
+            {"title": "결과 확인", "desc": "추천 상품 목록, 예상 금리, AI 추천 사유(XAI)를 확인합니다."}
+        ]) }}
     <div class="grid-1-2">
         <div class="card card-p h-fit">
             <h3 class="card-title mt-0 mb-4">가상 유저 프로필</h3>
@@ -3404,19 +3236,15 @@ function submitBulkDelete() {
     </div>
 {% endblock %}""",
     'user_stats.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card, empty_state %}
 {% block content %}
 <h1>유저 스탯 관리</h1>
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Data Management</span>
-            <h3 class="font-bold text-sm">유저 금융 데이터 관리</h3>
-        </div>
-        <p class="text-sm text-sub">
-            미션 자동 달성 여부를 판단하는 기준이 되는 유저의 금융 데이터(신용점수, DSR, 자산 연동 여부 등)를 조회하고 수정합니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("Data Management", "유저 금융 데이터 관리",
+    "미션 자동 달성 여부를 판단하는 기준이 되는 유저의 금융 데이터(신용점수, DSR, 자산 연동 여부 등)를 관리합니다.",
+    [
+        {"title": "데이터 조회", "desc": "개별 유저의 신용점수·DSR·자산 연동 현황을 확인합니다."},
+        {"title": "데이터 수정", "desc": "검토 후 필요한 항목을 직접 수정합니다."}
+    ]) }}
 
 <form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
     <span class="font-semibold text-sub">기간 설정:</span>
@@ -3454,7 +3282,7 @@ function submitBulkDelete() {
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">데이터가 없습니다.</td></tr>
+            {{ empty_state(7, "데이터가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
@@ -3552,19 +3380,15 @@ function submitBulkDelete() {
     </div>
 {% endblock %}""",
     'data_file_viewer.html': """{% extends "base.html" %}
+{% from "macros.html" import guide_card %}
 {% block content %}
 <h1>수집 데이터 파일 뷰어</h1>
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">File Viewer</span>
-            <h3 class="font-bold text-sm">JSON 파일 뷰어</h3>
-        </div>
-        <p class="text-sm text-sub">
-            커스텀 수집기를 통해 저장된 JSON 파일들의 목록을 조회하고 내용을 확인합니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("File Viewer", "JSON 파일 뷰어",
+    "커스텀 수집기를 통해 저장된 JSON 파일들의 목록을 조회하고 내용을 확인합니다.",
+    [
+        {"title": "파일 목록 조회", "desc": "저장된 JSON 파일 목록을 확인합니다."},
+        {"title": "파일 내용 확인", "desc": "개별 파일을 선택해 JSON 데이터 구조를 확인합니다."}
+    ]) }}
 
 <div class="grid-1-2">
     <div class="card card-p h-fit" style="max-height: 80vh; overflow-y: auto;">
@@ -4587,13 +4411,27 @@ def update_collection_config():
             # Update endpoints in collection_sources
             for s in sources:
                 ep_key = f"endpoint_{s.source_key}"
+                desc_key = f"description_{s.source_key}"
                 if ep_key in request.form:
                     conn.execute(text("UPDATE collection_sources SET endpoint = :ep WHERE source_key = :k"), {'ep': request.form[ep_key], 'k': s.source_key})
+                if desc_key in request.form:
+                    conn.execute(text("UPDATE collection_sources SET api_desc = :desc WHERE source_key = :k"), {'desc': request.form[desc_key], 'k': s.source_key})
             conn.commit()
         flash("수집 설정이 저장되었습니다.", "success")
     except Exception as e:
         flash(f"설정 저장 실패: {e}", "error")
     return redirect(url_for('collection_management'))
+
+@app.route('/collection-management/verify', methods=['POST'])
+@login_required
+def verify_collection_source():
+    endpoint = request.form.get('endpoint')
+    api_key = request.form.get('api_key')
+    
+    collector = get_collector()
+    success, message = collector.verify_custom_source(endpoint, api_key)
+    
+    return {'success': success, 'message': message}
 
 @app.route('/collection-management/add', methods=['POST'])
 @login_required
@@ -4672,51 +4510,35 @@ def trigger_job():
     try:
         collector = get_collector()
         configs = get_all_configs(collector.engine)
-
-        # DB에서 trigger_val에 해당하는 정보 조회 (endpoint 포함)
         with collector.engine.connect() as conn:
             row = conn.execute(text("SELECT source_key, config_key_enabled, endpoint, log_source FROM collection_sources WHERE trigger_val = :t"), {'t': job_type}).fetchone()
         
         if not row:
-             return _render_dashboard(message=f"알 수 없는 수집 작업입니다: {job_type}", status="error")
+            flash(f"알 수 없는 수집 작업입니다: {job_type}", "error")
+            return redirect(url_for('index'))
         
         source_key, config_key, endpoint, log_source = row
         
         if config_key and configs.get(config_key, '1') != '1':
-            return _render_dashboard(message=f"해당 수집 소스가 비활성화 상태입니다. 수집 관리에서 활성화해주세요.", status="warning")
+            flash(f"'{source_key}' 수집기가 비활성화 상태입니다. 수집 관리에서 활성화해주세요.", "warning")
+            return redirect(url_for('collection_management'))
 
         if job_type == 'loan':
             collector.collect_fss_loan_products()
-            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
-            if logs and logs[0]['status'] == 'FAIL':
-                return _render_dashboard(message=f"대출상품 수집 실패: {logs[0].get('error_message')}", status="error")
-            msg = "대출상품 수집이 완료되었습니다."
+            flash("대출상품 수집 작업이 요청되었습니다. 잠시 후 로그를 확인하세요.", "success")
         elif job_type == 'economy':
             collector.collect_economic_indicators()
-            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
-            if logs and logs[0]['status'] == 'FAIL':
-                return _render_dashboard(message=f"경제 지표 수집 실패: {logs[0].get('error_message')}", status="error")
-            msg = "경제 지표 수집이 완료되었습니다."
+            flash("경제 지표 수집 작업이 요청되었습니다. 잠시 후 로그를 확인하세요.", "success")
         elif job_type == 'income':
             collector.collect_kosis_income_stats()
-            logs = get_recent_logs(collector.engine, source=log_source, limit=1)
-            if logs and logs[0]['status'] == 'FAIL':
-                return _render_dashboard(message=f"소득 통계 수집 실패: {logs[0].get('error_message')}", status="error")
-            msg = "소득 통계 수집이 완료되었습니다."
+            flash("소득 통계 수집 작업이 요청되었습니다. 잠시 후 로그를 확인하세요.", "success")
         else:
-            # 커스텀 수집기 처리
-            if endpoint:
-                success, error = collector.collect_custom_source(source_key, endpoint)
-                if success:
-                    msg = f"'{source_key}' 수집이 완료되었습니다."
-                else:
-                    return _render_dashboard(message=f"수집 실패 ({source_key}): {error} (Target: {endpoint})", status="error")
-            else:
-                return _render_dashboard(message=f"커스텀 수집기 '{job_type}' 실행 실패: Endpoint URL이 설정되지 않았습니다.", status="error")
+            flash(f"'{source_key}' 수집 작업이 요청되었습니다. 잠시 후 로그를 확인하세요.", "success")
+            collector.collect_custom_source(source_key, endpoint)
 
-        return _render_dashboard(message=msg, status="success")
     except Exception as e:
-        return _render_dashboard(message=f"실행 실패: {e}", status="error")
+        flash(f"실행 실패: {e}", "error")
+    return redirect(url_for('index'))
 
 # ==========================================================================
 # [라우트] F2: 신용평가 가중치 관리
@@ -6122,21 +5944,6 @@ def delete_data_file():
     except Exception as e:
         flash(f"파일 삭제 실패: {e}", "error")
     return redirect(url_for('data_file_viewer'))
-
-@login_required
-def mark_notification_read(notification_id):
-    try:
-        collector = get_collector()
-        with collector.engine.connect() as conn:
-            conn.execute(
-                text("UPDATE notifications SET is_read = 1 WHERE notification_id = :id"),
-                {'id': notification_id}
-            )
-            conn.commit()
-        flash("알림이 읽음 처리되었습니다.", "success")
-    except Exception as e:
-        flash(f"알림 처리 실패: {e}", "error")
-    return redirect(request.referrer or url_for('view_data', table_name='notifications'))
 
 @app.route('/simulator', methods=['GET', 'POST'])
 @login_required

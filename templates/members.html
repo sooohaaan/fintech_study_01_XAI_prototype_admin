@@ -1,35 +1,20 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, status_badge, empty_state %}
 {% block content %}
 <h1>회원 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">사용자 관리</span>
-            <h3 class="font-bold text-sm">통합적인 사용자 뷰</h3>
-        </div>
-        <p class="text-sm text-sub">
-            사용자의 기본 정보뿐만 아니라, 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리합니다. 이는 개별 사용자에 대한 깊이 있는 이해를 돕고, 향후 <strong>개인화된 서비스</strong>를 제공하기 위한 기초 데이터가 됩니다.
-        </p>
-    </div>
-</div>
+{{ guide_card("사용자 관리", "통합적인 사용자 뷰",
+    "사용자의 기본 정보와 활동 내역(포인트, 미션, 대출 신청 등)을 통합적으로 관리하여 개인화된 서비스 제공을 위한 기초 데이터를 확보합니다.",
+    [
+        {"title": "사용자 조회", "desc": "전체 회원 목록을 조회·검색하고 핵심 활동 지표를 확인합니다."},
+        {"title": "정보 관리", "desc": "개별 사용자의 정보를 추가·수정하고 상태를 변경합니다."}
+    ]) }}
 
-<div class="info-banner">등록된 회원을 조회, 검색, 추가, 수정, 상태 변경할 수 있습니다.</div>
-
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">전체 회원</div>
-        <div class="summary-value">{{ total_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">활성 회원</div>
-        <div class="summary-value text-success">{{ active_count }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">정지 회원</div>
-        <div class="summary-value text-danger">{{ suspended_count }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "전체 회원", "value": total_count},
+    {"label": "활성 회원", "value": active_count, "color": "success"},
+    {"label": "정지 회원", "value": suspended_count, "color": "danger"}
+], "mb-6", title="회원 현황", badge="Members") }}
 
 <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
     <form method="get" action="/members" class="flex gap-2 items-center flex-wrap">
@@ -66,22 +51,14 @@
                 <td class="font-bold">{{ u.user_name }}</td>
                 <td>{{ u.email or '-' }}</td>
                 <td>{{ u.phone or '-' }}</td>
-                <td class="text-center">
-                    {% if u.status == 'active' %}
-                        <span class="badge badge-success">활성</span>
-                    {% elif u.status == 'suspended' %}
-                        <span class="badge badge-danger">정지</span>
-                    {% else %}
-                        <span class="badge badge-neutral">탈퇴</span>
-                    {% endif %}
-                </td>
+                <td class="text-center">{{ status_badge(u.status, "user") }}</td>
                 <td>{{ u.join_date or '-' }}</td>
                 <td class="text-center">
                     <a href="/members/{{ u.user_id }}" class="btn-tonal btn-sm">상세</a>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">등록된 회원이 없습니다.</td></tr>
+            {{ empty_state(7, "등록된 회원이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>

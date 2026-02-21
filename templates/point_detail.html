@@ -1,23 +1,15 @@
 {% extends "base.html" %}
+{% from "macros.html" import summary_grid, empty_state %}
 {% block content %}
 <h1>포인트 상세 - {{ user_id }}</h1>
 <a href="/points" class="nav-btn mb-4">목록으로 돌아가기</a>
 <div class="info-banner">해당 유저의 포인트 잔액과 전체 거래 내역을 확인할 수 있습니다.</div>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">현재 잔액</div>
-        <div class="summary-value">{{ "{:,}".format(user.balance) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 지급</div>
-        <div class="summary-value text-success">{{ "{:,}".format(user.total_earned) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(user.total_spent) }}</div>
-    </div>
-</div>
+{{ summary_grid([
+    {"label": "현재 잔액", "value": "{:,}".format(user.balance)},
+    {"label": "총 지급", "value": "{:,}".format(user.total_earned), "color": "success"},
+    {"label": "총 사용", "value": "{:,}".format(user.total_spent), "color": "danger"}
+], "mb-6", title="포인트 잔액", badge="Balance") }}
 
 <div class="table-wrapper">
     <h3 class="card-title text-primary text-sm mb-3">거래 내역</h3>
@@ -55,7 +47,7 @@
                 <td>{{ t.created_at }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="text-center text-sub p-4">거래 내역이 없습니다.</td></tr>
+            {{ empty_state(7, "거래 내역이 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>

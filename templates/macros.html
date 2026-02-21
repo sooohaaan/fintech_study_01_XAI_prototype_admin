@@ -1,0 +1,63 @@
+{% macro guide_card(badge, title, purpose, steps, note="", usage_desc="") %}
+<div class="card card-p card-static" style="margin-bottom: 1.5rem;">
+    <div class="flex items-center gap-2 mb-5">
+        <span class="badge badge-info">{{ badge }}</span>
+        <h3 class="font-bold text-sm">{{ title }}</h3>
+    </div>
+    <div class="mb-4" style="background: var(--bg-soft); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">목적</p>
+        <p class="text-sm text-sub">{{ purpose | safe }}</p>
+        {% if note %}<p class="text-xs text-muted mt-2">{{ note | safe }}</p>{% endif %}
+    </div>
+    <div style="background: var(--bg-soft); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-3">사용 방법</p>
+        {% if usage_desc %}<p class="text-xs text-muted mb-3">{{ usage_desc }}</p>{% endif %}
+        <div style="display: flex; gap: 0.75rem;">
+            {% for step in steps %}
+            <div style="flex: 1; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: 1rem 1.25rem;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="guide-step-num">{{ loop.index }}</span>
+                    <strong class="text-sm">{{ step.title }}</strong>
+                </div>
+                <p class="text-xs text-muted">{{ step.desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro empty_state(colspan, message) %}<tr><td colspan="{{ colspan }}" class="text-center text-sub p-4">{{ message }}</td></tr>{% endmacro %}
+
+{% macro pagination(page, total_pages, prev_url, next_url, total_count="") %}
+<div class="flex justify-between items-center mt-4">
+    {% if page > 1 %}<a href="{{ prev_url }}" class="nav-btn">이전</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
+    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}{% if total_count %} ({{ total_count }}건){% endif %}</span>
+    {% if page < total_pages %}<a href="{{ next_url }}" class="nav-btn">다음</a>
+    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro status_badge(status, type="mission", extra_class="") %}{% if type == "mission" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">completed</span>{% elif status == "in_progress" %}<span class="badge badge-info {{ extra_class }}">in_progress</span>{% elif status == "expired" %}<span class="badge badge-danger {{ extra_class }}">expired</span>{% elif status == "given_up" %}<span class="badge badge-neutral {{ extra_class }}">given_up</span>{% else %}<span class="badge badge-warning {{ extra_class }}">pending</span>{% endif %}{% elif type == "mission_ko" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">완료</span>{% elif status == "in_progress" %}<span class="badge badge-info {{ extra_class }}">진행중</span>{% elif status == "expired" %}<span class="badge badge-danger {{ extra_class }}">만료</span>{% else %}<span class="badge badge-warning {{ extra_class }}">대기</span>{% endif %}{% elif type == "user" %}{% if status == "active" %}<span class="badge badge-success {{ extra_class }}">활성</span>{% elif status == "suspended" %}<span class="badge badge-danger {{ extra_class }}">정지</span>{% else %}<span class="badge badge-neutral {{ extra_class }}">탈퇴</span>{% endif %}{% elif type == "purchase" %}{% if status == "completed" %}<span class="badge badge-success {{ extra_class }}">completed</span>{% elif status == "cancelled" %}<span class="badge badge-neutral {{ extra_class }}">cancelled</span>{% else %}<span class="badge badge-warning {{ extra_class }}">{{ status }}</span>{% endif %}{% endif %}{% endmacro %}
+
+{% macro summary_grid(cards, extra_class="", title="", badge="") %}
+<div class="card card-p card-static {{ extra_class }}">
+    {% if title %}
+    <div class="flex items-center gap-2 mb-5">
+        {% if badge %}<span class="badge badge-info">{{ badge }}</span>{% endif %}
+        <h3 class="font-bold text-sm">{{ title }}</h3>
+    </div>
+    {% endif %}
+    <div class="summary-grid">
+        {% for card in cards %}
+        <div class="summary-card"{% if card.title %} title="{{ card.title }}"{% endif %}>
+            <div class="summary-label">{{ card.label }}</div>
+            <div class="summary-value{% if card.color %} text-{{ card.color }}{% endif %}">{{ card.value }}</div>
+            {% if card.help %}<p class="help-text">{{ card.help }}</p>{% endif %}
+            {% if card.link %}<a href="{{ card.link }}" class="btn-tonal btn-sm mt-2" style="text-decoration: none; font-size: 0.75rem; padding: 4px 12px; height: auto;">{{ card.link_label if card.link_label else "모아보기" }}</a>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}

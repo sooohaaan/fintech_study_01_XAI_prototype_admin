@@ -50,7 +50,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="text-center text-muted p-4">수집된 로그가 없습니다.</td></tr>
+            {{ empty_state(5, "수집된 로그가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>

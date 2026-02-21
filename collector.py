@@ -261,6 +261,29 @@ class DataCollector:
         self._replace_table('raw_economic_indicators', df)
         self._log_status(source_name, "SUCCESS (MOCK)", len(df))
 
+    def verify_custom_source(self, endpoint, api_key):
+        """커스텀 수집기 설정 검증 (API 호출 테스트)"""
+        try:
+            if not endpoint or not endpoint.startswith('http'):
+                return False, "유효한 URL이 아닙니다."
+
+            params = {}
+            if api_key:
+                # 일반적인 공공데이터 포털 파라미터명 시도
+                params['auth'] = api_key
+                params['serviceKey'] = api_key
+                params['key'] = api_key
+            
+            # 검증용 요청 (Timeout 5초)
+            response = requests.get(endpoint, params=params, timeout=5)
+            
+            if response.status_code == 200:
+                return True, "연결 성공 (200 OK)"
+            else:
+                return False, f"연결 실패 (Status: {response.status_code})"
+        except Exception as e:
+            return False, f"오류 발생: {str(e)}"
+
     def collect_custom_source(self, source_key, endpoint):
         """커스텀 수집기 실행 (Generic JSON Collector)"""
         try:

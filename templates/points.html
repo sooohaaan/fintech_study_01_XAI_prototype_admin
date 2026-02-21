@@ -1,25 +1,15 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state, pagination %}
 {% block content %}
 <h1>포인트 생애주기 관리</h1>
 
-<div class="card guide-card">
-    <div class="card-p">
-        <div class="flex items-center gap-2 mb-2">
-            <span class="badge badge-info">Tokenomics</span>
-            <h3 class="font-bold text-sm">포인트 순환 구조 (Lifecycle)</h3>
-        </div>
-        <div class="text-sm text-sub space-y-2">
-            <p>TrustFin 포인트 시스템은 <strong>발행(Minting) → 지급(Allocation) → 유통(Circulation) → 소각(Burn)</strong>의 생애주기를 가집니다.</p>
-            <ul style="list-style-type: disc; padding-left: 20px; margin: 0;">
-                <li><strong>지급 (Earning):</strong> 미션 달성 시 시스템 풀에서 사용자에게 포인트가 지급됩니다. (동기 부여)</li>
-                <li><strong>사용 (Spending):</strong> 포인트 상품 구매 시 포인트가 회수되어 소각됩니다. (가치 실현)</li>
-                <li><strong>소멸/회수 (Expiration/Clawback):</strong> 유효기간 만료 또는 어뷰징 적발 시 포인트를 회수하여 총 유통량을 조절합니다.</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<div class="info-banner">전체 포인트의 공급량과 유통량을 모니터링하고, 개별 유저의 포인트 흐름을 제어합니다.</div>
+{{ guide_card("Tokenomics", "포인트 순환 구조 (Lifecycle)",
+    "TrustFin 포인트 시스템은 <strong>발행 → 지급 → 유통 → 소각</strong>의 생애주기를 가집니다. 전체 포인트 공급량·유통량을 모니터링하고 개별 유저의 포인트 흐름을 제어합니다.",
+    [
+        {"title": "지급 (Earning)", "desc": "미션 달성 시 시스템 풀에서 사용자에게 포인트가 지급됩니다."},
+        {"title": "사용 (Spending)", "desc": "포인트 상품 구매 시 포인트가 회수되어 소각됩니다."},
+        {"title": "소멸/회수", "desc": "유효기간 만료 또는 어뷰징 적발 시 포인트를 회수해 총 유통량을 조절합니다."}
+    ]) }}
 
 <form method="get" class="mb-6 bg-soft rounded-lg flex gap-2 items-center flex-wrap p-4">
     <span class="font-semibold text-sub">기간 설정:</span>
@@ -31,34 +21,14 @@
     <a href="/points" class="nav-btn">전체 기간</a>
 </form>
 
-<div class="summary-grid mb-6">
-    <div class="summary-card">
-        <div class="summary-label">총 발행량 (Minted)</div>
-        <div class="summary-value text-success">{{ "{:,}".format(total_minted) }}</div>
-        <p class="help-text">지급된 포인트 총액</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">현재 유통량 (Circulating)</div>
-        <div class="summary-value text-primary">{{ "{:,}".format(total_balance) }}</div>
-        <p class="help-text">현재 유저 보유 잔액 (Snapshot)</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">총 사용 (Spent)</div>
-        <div class="summary-value text-danger">{{ "{:,}".format(total_spent_purchase) }}</div>
-        <p class="help-text">상품 구매로 소각된 포인트</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">기타 감소 (Clawback/Expired)</div>
-        <div class="summary-value text-sub">{{ "{:,}".format(total_clawback + total_expired) }}</div>
-        <p class="help-text" title="회수: {{ '{:,}'.format(total_clawback) }} / 소멸: {{ '{:,}'.format(total_expired) }}">
-            회수: {{ "{:,}".format(total_clawback) }} / 소멸: {{ "{:,}".format(total_expired) }}</p>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">참여 유저 수</div>
-        <div class="summary-value">{{ user_count }}</div>
-        <p class="help-text">포인트 시스템 활성 유저</p>
-    </div>
-</div>
+{% set clawback_help = "회수: " ~ "{:,}".format(total_clawback) ~ " / 소멸: " ~ "{:,}".format(total_expired) %}
+{{ summary_grid([
+    {"label": "총 발행량 (Minted)", "value": "{:,}".format(total_minted), "color": "success", "help": "지급된 포인트 총액"},
+    {"label": "현재 유통량 (Circulating)", "value": "{:,}".format(total_balance), "color": "primary", "help": "현재 유저 보유 잔액 (Snapshot)"},
+    {"label": "총 사용 (Spent)", "value": "{:,}".format(total_spent_purchase), "color": "danger", "help": "상품 구매로 소각된 포인트"},
+    {"label": "기타 감소 (Clawback/Expired)", "value": "{:,}".format(total_clawback + total_expired), "color": "sub", "help": clawback_help},
+    {"label": "참여 유저 수", "value": user_count, "help": "포인트 시스템 활성 유저"}
+], "mb-6", title="포인트 공급 현황", badge="Points") }}
 
 <div class="card card-p mb-6">
     <h3 class="card-title text-primary mt-0">포인트 유동성 제어 (Manual Control)</h3>
@@ -108,17 +78,13 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="text-center text-sub p-4">포인트 데이터가 없습니다.</td></tr>
+            {{ empty_state(6, "포인트 데이터가 없습니다.") }}
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="flex justify-between items-center mt-4">
-    {% if page > 1 %}<a href="{{ url_for('points', page=page-1, start_date=start_date, end_date=end_date, search_user=search_user) }}" class="nav-btn">이전</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">이전</span>{% endif %}
-    <span class="text-sub font-bold">Page <span class="text-primary">{{ page }}</span> / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ url_for('points', page=page+1, start_date=start_date, end_date=end_date, search_user=search_user) }}" class="nav-btn">다음</a>
-    {% else %}<span class="nav-btn" style="opacity: 0.5; cursor: default;">다음</span>{% endif %}
-</div>
+{{ pagination(page, total_pages,
+    url_for('points', page=page-1, start_date=start_date, end_date=end_date, search_user=search_user),
+    url_for('points', page=page+1, start_date=start_date, end_date=end_date, search_user=search_user)) }}
 {% endblock %}

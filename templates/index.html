@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import guide_card, summary_grid, empty_state %}
 
 {% block head_meta %}
     {% if auto_refresh %}
@@ -7,49 +8,27 @@
 {% endblock %}
 
 {% block content %}
-        <!-- Educational Guide Card -->
-        <div class="card guide-card">
-            <div class="card-p">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="badge badge-info">Dashboard Guide</span>
-                    <h3 class="font-bold text-sm">통합 관제 대시보드</h3>
-                </div>
-                <div class="text-sm text-sub space-y-2">
-                    <p><strong>목적:</strong> 서비스의 전반적인 건강 상태(Health)와 핵심 지표를 한눈에 파악합니다.</p>
-                    <p><strong>기능:</strong>
-                        1. <strong>시스템 상태:</strong> DB 연결 및 수집기 활성 상태 모니터링.<br>
-                        2. <strong>데이터 요약:</strong> 수집된 금융 데이터의 총량 확인.<br>
-                        3. <strong>수집 로그:</strong> 각 데이터 소스별 최근 실행 결과(성공/실패) 및 에러 확인.
-                    </p>
-                </div>
-            </div>
-        </div>
+        {{ guide_card("Dashboard Guide", "통합 관제 대시보드",
+            "서비스의 전반적인 건강 상태(Health)와 핵심 지표를 한눈에 파악합니다.",
+            [
+                {"title": "시스템 상태", "desc": "DB 연결 및 수집기 활성 상태를 모니터링합니다."},
+                {"title": "데이터 요약", "desc": "수집된 금융 데이터의 총량을 확인합니다."},
+                {"title": "수집 로그", "desc": "각 데이터 소스별 최근 실행 결과(성공/실패) 및 에러를 확인합니다."}
+            ]) }}
 
-        <div class="summary-grid">
-            <div class="summary-card" title="금감원 API에서 수집된 대출 상품의 총 건수입니다.">
-                <div class="summary-label">대출 상품 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.loan_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다.">
-                <div class="summary-label">경제 지표 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.economy_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다.">
-                <div class="summary-label">소득 통계 수</div>
-                <div class="summary-value">{{ "{:,}".format(stats.income_count | default(0)) }}</div>
-            </div>
-            <div class="summary-card" title="모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다.">
-                <div class="summary-label">총 수집 로그</div>
-                <div class="summary-value">{{ "{:,}".format(stats.log_count | default(0)) }}</div>
-            </div>
-        </div>
+        {{ summary_grid([
+            {"label": "대출 상품 수", "value": "{:,}".format(stats.loan_count | default(0)), "title": "금감원 API에서 수집된 대출 상품의 총 건수입니다."},
+            {"label": "경제 지표 수", "value": "{:,}".format(stats.economy_count | default(0)), "title": "통계청에서 수집된 경제 지표(금리, 물가 등)의 총 건수입니다."},
+            {"label": "소득 통계 수", "value": "{:,}".format(stats.income_count | default(0)), "title": "통계청 KOSIS에서 수집된 소득 통계의 총 건수입니다."},
+            {"label": "총 수집 로그", "value": "{:,}".format(stats.log_count | default(0)), "title": "모든 데이터 소스의 수집 실행 기록(성공/실패 포함)의 총 건수입니다."}
+        ], title="수집 데이터 현황", badge="Overview") }}
 
         <div class="grid-2 mb-6">
             <!-- 신용 평가 가중치 요약 -->
             <div class="card h-fit">
                 <div class="card-header">
                     <h3 class="card-title">현재 신용 평가 가중치</h3>
-                    <a href="/credit-weights" class="btn-tonal" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
+                    <a href="/credit-weights" class="nav-btn" title="신용평가 가중치 상세 설정 페이지로 이동합니다.">설정 변경</a>
                 </div>
                 <div class="card-p">
                     <p class="help-text mb-3">세 가중치의 합은 1.0이어야 합니다.</p>
@@ -60,11 +39,11 @@
                         </div>
                         <div class="weight-item middle">
                             <div class="weight-label">고용 안정성</div>
-                            <div class="weight-value text-secondary" title="WEIGHT_JOB_STABILITY">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
+                            <div class="weight-value text-success" title="WEIGHT_JOB_STABILITY">{{ stats.WEIGHT_JOB_STABILITY | default(0.3) }}</div>
                         </div>
                         <div class="weight-item">
                             <div class="weight-label">자산 비중</div>
-                            <div class="weight-value text-tertiary" title="WEIGHT_ESTATE_ASSET">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
+                            <div class="weight-value text-warning" title="WEIGHT_ESTATE_ASSET">{{ stats.WEIGHT_ESTATE_ASSET | default(0.2) }}</div>
                         </div>
                     </div>
                 </div>
@@ -179,30 +158,30 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">최근 가입 회원</h3>
-                    <a href="/members" class="btn-tonal btn-sm">전체보기</a>
+                    <a href="/members" class="nav-btn" style="font-size: 0.75rem; padding: 4px 12px; height: 28px;">전체보기</a>
                 </div>
                 <div class="card-body p-0">
-                    <table class="w-full">
+                    <table class="w-full" style="font-size: 0.85rem; border-collapse: collapse;">
                         <thead>
                             <tr>
-                                <th>이름</th>
-                                <th>ID</th>
-                                <th>가입일</th>
-                                <th class="text-center">상태</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">이름</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">ID</th>
+                                <th style="padding: 10px 16px; background: var(--bg-soft);">가입일</th>
+                                <th style="padding: 10px 16px; text-align: center; background: var(--bg-soft);">상태</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for u in recent_users %}
-                            <tr>
-                                <td><strong class="font-semibold">{{ u.user_name }}</strong></td>
-                                <td class="text-muted font-mono">{{ u.user_id }}</td>
-                                <td>{{ u.join_date }}</td>
-                                <td class="text-center">
-                                    <span class="badge {{ 'badge-success' if u.status == 'active' else 'badge-danger' if u.status == 'suspended' else 'badge-neutral' }}">{{ u.status }}</span>
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 10px 16px;"><strong>{{ u.user_name }}</strong></td>
+                                <td style="padding: 10px 16px;" class="text-muted">{{ u.user_id }}</td>
+                                <td style="padding: 10px 16px;">{{ u.join_date }}</td>
+                                <td style="padding: 10px 16px; text-align: center;">
+                                    <span class="badge {{ 'badge-success' if u.status == 'active' else 'badge-danger' if u.status == 'suspended' else 'badge-neutral' }}" style="font-size: 0.7rem;">{{ u.status }}</span>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="4" class="text-center text-muted p-4">가입 회원이 없습니다.</td></tr>
+                            {{ empty_state(4, "가입 회원이 없습니다.") }}
                             {% endfor %}
                         </tbody>
                     </table>

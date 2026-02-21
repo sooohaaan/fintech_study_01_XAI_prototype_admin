@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state %}
 {% block content %}
 <h1>미션 상세</h1>
 <a href="/missions" class="nav-btn mb-4">목록으로 돌아가기</a>
@@ -157,19 +158,7 @@
                 {% for u in related_users %}
                 <tr class="{{ 'bg-soft' if u.mission_id == mission.mission_id else '' }}">
                     <td class="font-bold">{{ u.user_id }}</td>
-                    <td class="text-center">
-                        {% if u.status == 'completed' %}
-                            <span class="badge badge-success">completed</span>
-                        {% elif u.status == 'in_progress' %}
-                            <span class="badge badge-info">in_progress</span>
-                        {% elif u.status == 'expired' %}
-                            <span class="badge badge-danger">expired</span>
-                        {% elif u.status == 'given_up' %}
-                            <span class="badge badge-neutral">given_up</span>
-                        {% else %}
-                            <span class="badge badge-warning">pending</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-center">{{ status_badge(u.status) }}</td>
                     <td>{{ u.created_at }}</td>
                     <td>{{ u.completed_at or '-' }}</td>
                     <td class="text-center">
@@ -181,7 +170,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" class="text-center text-sub p-4">수행 중인 다른 유저가 없습니다.</td></tr>
+                {{ empty_state(5, "수행 중인 다른 유저가 없습니다.") }}
                 {% endfor %}
             </tbody>
         </table>
@@ -207,7 +196,7 @@
                     <td>{{ h.description }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="text-center text-sub p-4">변경 이력이 없습니다.</td></tr>
+                {{ empty_state(4, "변경 이력이 없습니다.") }}
                 {% endfor %}
             </tbody>
         </table>
