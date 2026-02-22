@@ -1,0 +1,21 @@
+# 민감 정보 (절대 커밋하지 않음)
+secrets.toml
+.streamlit/secrets.toml
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

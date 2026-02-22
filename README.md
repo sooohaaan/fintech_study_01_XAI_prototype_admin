@@ -11,10 +11,11 @@
 ## 🛠 기술 스택 (Tech Stack)
 *   **Language**: Python 3.12+
 *   **Web Framework**: Flask (Server-side Rendering)
+*   **Analytics Dashboard**: Streamlit (Flask 내 iframe으로 임베딩)
 *   **Database**: MySQL (via SQLAlchemy & mysql-connector-python)
 *   **Data Processing**: Pandas (데이터 정제 및 분석)
-*   **Frontend**: Jinja2 Templates, HTML5, CSS3 (Custom Design System)
-*   **Scheduling**: Python `schedule` library (데이터 자동 수집)
+*   **Frontend**: Jinja2 Templates + Macros, HTML5, CSS3 (Custom Design System)
+*   **Scheduling**: Python `schedule` library (데이터 자동 수집, 백그라운드 스레드)
 
 ## ✨ 주요 기능 (Key Features)
 
@@ -24,8 +25,9 @@
 *   **로그 테이블**: 데이터 수집 성공/실패 이력 및 에러 메시지 확인.
 
 ### 2. 데이터 수집 관리 (`/collection-management`)
-*   **수집기 제어**: 금융감독원(대출상품), 통계청(소득), 한국은행(경제지표) 등 소스별 수집기 ON/OFF 및 수동 실행(새로고침).
-*   **API 설정**: 각 기관별 API Key 및 수집 기간/주기(매일, 매월 등)를 UI에서 직접 설정.
+*   **수집기 제어**: 금융감독원(대출상품), 통계청(소득), 한국은행(경제지표) 등 소스별 수집기 ON/OFF 및 수동 실행.
+*   **커스텀 수집기 추가/삭제**: UI에서 새 수집기 등록 및 기존 수집기 삭제.
+*   **API 설정**: 각 기관별 API Key 및 수집 기간/주기(매일, 매월 등)를 UI에서 직접 설정 및 검증.
 *   **상태 추적**: 최초/최근 실행 일시, 누적 수집 건수 등 상세 상태 모니터링.
 
 ### 3. 정책 및 알고리즘 설정
@@ -34,15 +36,21 @@
 *   **XAI 임계값**: 사용자에게 "소득 수준 우수", "고용 안정적" 등의 설명이 표시되는 기준점 설정.
 
 ### 4. 서비스 운영 관리
-*   **회원 관리 (`/members`)**: 전체 회원 목록 조회, 상세 정보(포인트, 미션 이력) 확인, 상태 변경(활성/정지/탈퇴).
+*   **회원 관리 (`/members`)**: 전체 회원 목록 조회, 상세 정보(포인트, 미션 이력) 확인, 회원 추가, 상태 변경(활성/정지/탈퇴), 삭제.
+*   **유저 스탯 관리 (`/user-stats`)**: 미션 자동 달성 판단 기준이 되는 유저별 금융 데이터(신용점수, DSR, 카드사용률, 연체 여부 등) 조회 및 수정.
 *   **상품 관리 (`/products`)**: 수집된 대출 상품의 서비스 노출 여부(Visible/Hidden) 제어.
-*   **미션 관리 (`/missions`)**: AI가 생성한 유저별 금융 미션(신용점수 올리기 등) 현황 및 성공률 모니터링.
+*   **미션 관리 (`/missions`)**: AI가 생성한 유저별 금융 미션 현황 및 상세 조회. 미션 제목·설명·유형·상태·보상·마감일 등 인라인 수정 및 일괄 처리. 미션 삭제 이력 로그 조회(`/missions/deletion-logs`).
 *   **포인트 관리 (`/points`)**: 유저 포인트 현황 조회 및 관리자 권한으로 포인트 수동 지급/차감.
-*   **포인트 상품 (`/point-products`)**: 포인트로 교환 가능한 상품(쿠폰 등) 등록 및 재고 관리.
+*   **포인트 상품 (`/point-products`)**: 포인트로 교환 가능한 상품(쿠폰 등) 등록·수정·활성화/비활성화, 재고 관리. 구매 내역 조회(`/point-products/purchases`).
 
 ### 5. 시뮬레이터 & 데이터 조회
 *   **대출 추천 시뮬레이터 (`/simulator`)**: 가상의 유저 프로필(소득, 자산, 직업 등)을 입력하여 현재 설정된 가중치로 어떤 상품이 추천되는지 즉시 테스트.
-*   **Raw Data Viewer (`/data/*`)**: 수집된 원본 데이터를 테이블 형태로 조회 및 검색.
+*   **Raw Data Viewer (`/data/<table_name>`)**: 수집된 원본 데이터를 테이블 형태로 조회 및 검색.
+*   **수집 파일 뷰어 (`/data-files`)**: 커스텀 수집기가 저장한 JSON 파일 목록 및 내용 조회, 파일 삭제.
+
+### 6. 시스템 & 분석
+*   **시스템 정보 (`/system-info`)**: 서버 OS·Python·Flask 버전, 메모리 사용량, DB 연결 상태 및 테이블 목록 확인.
+*   **애널리틱스 (`/analytics`)**: Streamlit 대시보드(`admin_app.py`)를 iframe으로 임베딩하여 심층 데이터 분석 제공.
 
 ## 🎨 디자인 시스템 (Design System)
 TrustFin 브랜드 아이덴티티를 반영한 커스텀 CSS를 적용했습니다.
@@ -52,19 +60,20 @@ TrustFin 브랜드 아이덴티티를 반영한 커스텀 CSS를 적용했습니
     *   `Evidence Grey (#8E8E8E)` & `Slate Blue-Grey (#4A5568)`: 논리적이고 차분한 보조 컬러.
 *   **UI Components**:
     *   **Narrative Grid**: 배경의 미세한 격자 패턴으로 시스템적 구조 강조.
-    *   **Guide Card**: 각 페이지 상단에 기능의 설계 의도와 XAI 관점의 설명을 제공하는 가이드 카드 배치.
+    *   **Guide Card (Jinja2 매크로)**: `macros.html`에 정의된 `guide_card` 매크로를 통해 각 페이지 상단에 기능의 설계 의도와 XAI 관점의 설명을 표준화된 형태로 제공.
+    *   **Filter Form (Jinja2 매크로)**: `filter_form` 매크로로 목록 페이지의 검색·필터 UI를 일관되게 렌더링.
+    *   **Cache Busting**: 정적 파일 URL에 `mtime` 기반 버전 파라미터를 자동 추가하여 캐시 문제를 방지.
     *   **Dark Mode**: 시스템 설정에 따른 다크 모드 지원.
 
 ## 🚀 설치 및 실행 (Installation & Run)
 
-### 1. 환경 설정
-Python 3.12 이상 환경에서 필요한 라이브러리를 설치합니다.
+### 1. 의존성 설치
 ```bash
-pip install flask pandas sqlalchemy mysql-connector-python requests psutil schedule toml
+pip install -r requirements.txt
 ```
 
 ### 2. 데이터베이스 설정
-프로젝트 루트 또는 `.streamlit` 폴더에 `secrets.toml` 파일을 생성하거나 환경 변수를 설정하여 DB 연결 정보를 입력합니다.
+프로젝트 루트에 `secrets.toml` 파일을 생성하거나 환경 변수를 설정하여 DB 연결 정보를 입력합니다.
 
 **secrets.toml 예시:**
 ```toml
@@ -76,22 +85,82 @@ user = "root"
 password = "your_password"
 ```
 
-### 3. 서버 실행
+**환경 변수로 설정하는 경우:**
 ```bash
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_USER=root
+export DB_PASSWORD=your_password
+export DB_DATABASE=fintech_db
+```
+
+### 3. 보안 환경변수 설정 (필수)
+아래 환경변수를 반드시 설정해야 합니다. 미설정 시 서버 로그에 경고가 출력되며, 프로덕션 환경에서는 보안 위협이 됩니다.
+
+```bash
+# Flask 세션 서명 키 (충분히 길고 무작위한 값으로 설정)
+export FLASK_SECRET_KEY="your-random-secret-key"
+
+# 관리자 계정
+export ADMIN_USER="your_admin_id"
+export ADMIN_PASSWORD="your_strong_password"
+
+# 개발 환경에서만 활성화 (프로덕션에서는 설정하지 않음)
+# export FLASK_DEBUG=true
+```
+
+### 3. 서버 실행
+
+**실행 스크립트 사용 (권장):**
+```bash
+bash run.sh
+```
+스크립트 실행 후 모드를 선택합니다.
+*   `1`: Flask Admin Dashboard 단독 실행 (Port 5001)
+*   `2`: Streamlit Data App 단독 실행 (Port 8501)
+
+**직접 실행:**
+```bash
+# Flask 대시보드 (Streamlit을 서브프로세스로 자동 실행 포함)
 python admin_flask.py
 ```
-*   서버가 시작되면 브라우저에서 `http://localhost:5001`로 접속합니다.
-*   초기 관리자 계정: `admin` / `admin1234` (환경변수로 변경 가능)
+*   브라우저에서 `http://localhost:5001`로 접속합니다.
+*   관리자 계정은 반드시 환경변수로 설정하세요 (미설정 시 서버 로그에 경고 출력).
+*   Flask 실행 시 `admin_app.py`(Streamlit)가 Port 8501에 서브프로세스로 자동 시작됩니다.
 
 ## 🗂️ 폴더 구조
 ```
 📦 fintech_study_01_XAI_prototype_admin
- ┣ 📂 static              # CSS, JS, 이미지 등 정적 파일
- ┣ 📂 templates           # Jinja2 HTML 템플릿
- ┃ ┣ 📂 components        # 재사용 가능한 컴포넌트 (log_table 등)
- ┃ ┗ 📜 *.html            # 각 페이지별 템플릿 파일
- ┣ 📜 admin_flask.py      # Flask 메인 애플리케이션 및 라우팅
- ┣ 📜 collector.py        # 데이터 수집기 및 스케줄러 로직
- ┣ 📜 recommendation_logic.py # 신용 평가 및 추천 알고리즘 코어
- ┗ 📜 README.md           # 프로젝트 설명서
+ ┣ 📂 static                    # 정적 파일
+ ┃ ┣ 📜 style.css               # 메인 커스텀 CSS (디자인 시스템)
+ ┃ ┗ 📜 login.css               # 로그인 페이지 전용 CSS
+ ┣ 📂 templates                 # Jinja2 HTML 템플릿
+ ┃ ┣ 📂 components              # 재사용 컴포넌트
+ ┃ ┃ ┗ 📜 log_table.html        # 수집 로그 테이블 컴포넌트
+ ┃ ┣ 📜 macros.html             # guide_card, filter_form 등 Jinja2 매크로 정의
+ ┃ ┣ 📜 base.html               # 공통 레이아웃 (네비게이션, 헤더)
+ ┃ ┣ 📜 login.html              # 로그인 페이지
+ ┃ ┣ 📜 index.html              # 메인 대시보드
+ ┃ ┣ 📜 collection_management.html
+ ┃ ┣ 📜 credit_weights.html
+ ┃ ┣ 📜 recommend_settings.html
+ ┃ ┣ 📜 products.html
+ ┃ ┣ 📜 members.html / member_detail.html / member_form.html
+ ┃ ┣ 📜 missions.html / mission_detail.html / mission_deletion_logs.html
+ ┃ ┣ 📜 points.html / point_detail.html
+ ┃ ┣ 📜 point_products.html / point_product_form.html / point_purchases.html
+ ┃ ┣ 📜 user_stats.html / user_stats_form.html
+ ┃ ┣ 📜 simulator.html
+ ┃ ┣ 📜 data_viewer.html        # DB 테이블 Raw Data 조회
+ ┃ ┣ 📜 data_file_viewer.html   # JSON 파일 뷰어
+ ┃ ┣ 📜 system_info.html        # 시스템/DB 상태 정보
+ ┃ ┗ 📜 streamlit_embed.html    # Streamlit iframe 임베딩
+ ┣ 📜 admin_flask.py            # Flask 메인 앱 (라우팅, 인증, 스케줄러)
+ ┣ 📜 admin_app.py              # Streamlit 분석 대시보드
+ ┣ 📜 collector.py              # DataCollector 클래스 (수집 로직 및 스케줄링)
+ ┣ 📜 recommendation_logic.py   # 신용 평가 및 대출 추천 알고리즘 코어
+ ┣ 📜 requirements.txt          # Python 의존성 목록
+ ┣ 📜 run.sh                    # Flask / Streamlit 실행 선택 스크립트
+ ┣ 📜 secrets.toml              # DB 연결 정보 (git에서 제외 권장)
+ ┗ 📜 README.md                 # 프로젝트 설명서
 ```

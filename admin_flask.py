@@ -40,7 +40,12 @@ if not os.path.exists(components_dir):
     os.makedirs(components_dir)
 
 app = Flask(__name__, static_folder=static_dir, static_url_path='/static', template_folder=template_dir)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev_only_fallback_key')
+_secret_key = os.getenv('FLASK_SECRET_KEY')
+if not _secret_key:
+    import secrets as _secrets
+    _secret_key = _secrets.token_hex(32)
+    print("[WARNING] FLASK_SECRET_KEY 환경변수가 설정되지 않았습니다. 임시 랜덤 키를 사용합니다. 서버 재시작 시 세션이 초기화됩니다.")
+app.secret_key = _secret_key
 
 # [Self-Repair] 정적 파일 캐싱 방지 (Cache Busting)
 # url_for('static', filename='...') 호출 시 파일의 수정 시간(mtime)을 v 파라미터로 자동 추가
@@ -761,7 +766,11 @@ def login():
         password = request.form['password']
         remember_me = request.form.get('remember_me')
 
-        if username == os.getenv('ADMIN_USER', 'admin') and password == os.getenv('ADMIN_PASSWORD', 'admin1234'):
+        _admin_user = os.getenv('ADMIN_USER', 'admin')
+        _admin_password = os.getenv('ADMIN_PASSWORD', 'admin1234')
+        if _admin_user == 'admin' or _admin_password == 'admin1234':
+            print("[WARNING] ADMIN_USER 또는 ADMIN_PASSWORD가 기본값입니다. 환경변수로 반드시 변경하세요.")
+        if username == _admin_user and password == _admin_password:
             # 로그인 성공 시 시도 횟수 초기화
             if ip in login_attempts:
                 del login_attempts[ip]
@@ -2765,4 +2774,7 @@ if __name__ == '__main__':
     # Flask의 리로더가 활성화된 경우 메인 프로세스에서만 스케줄러 실행
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         start_scheduler()
-    app.run(host='0.0.0.0', debug=True, port=5001)
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    if debug_mode:
+        print("[WARNING] FLASK_DEBUG=true: 디버그 모드가 활성화되어 있습니다. 프로덕션 환경에서는 반드시 비활성화하세요.")
+    app.run(host='0.0.0.0', debug=debug_mode, port=5001)
